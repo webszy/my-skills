@@ -11,13 +11,21 @@ Core principle:
 
 > Small changes should be fast. Risky changes should be controlled.
 
+## Bundled References
+
+For Level M, Level L, and Level XL tasks, read `references/karpathy-guidelines.md` before producing a plan, design, or implementation. Use it to prevent generic planning, overbuilding, scope creep, unrelated edits, and weak verification.
+
+For Level S tasks, reading this reference is optional; keep simple changes lightweight.
+
+This reference is bundled with cdf, so it does not require the user to install `karpathy-guidelines` separately. Treat it as supporting guidance; cdf remains responsible for risk classification, approval gates, and final execution flow.
+
 ## Target Existence Check
 
 Before editing a task that modifies an existing target, first verify that the target exists in the codebase.
 
 Locate the relevant component, function, route, API, configuration, asset, or copy before deciding how to change it. This applies to every risk level, including Level S.
 
-If the task is explicitly to create a new module, service, feature, workflow, or architecture, do not block on an existing-target lookup. Classify it as Level XL when it requires design or phased implementation, then enter the design workflow.
+If the task is explicitly to create a new module, service, top-level workflow, or architecture, do not block on an existing-target lookup. However, perform a quick search for any existing module, service, workflow, or architecture with the same name or purpose to avoid duplication before entering the design workflow. Classify it as Level XL when it requires design or phased implementation, then enter the design workflow.
 
 If the requested target does not exist, cannot be located, or cannot be uniquely identified:
 
@@ -27,6 +35,28 @@ If the requested target does not exist, cannot be located, or cannot be uniquely
 - Ask whether the intended action is to create a new target, modify a different target, or correct the request.
 
 Do not silently create a missing target when the user asked to modify an existing one.
+
+## Evidence-Based Thinking
+
+After the target existence check, think from concrete code evidence before producing a plan.
+
+For Level M, Level L, and Level XL tasks, do not output a modification plan or design until you have inspected relevant files or search results and can name concrete evidence, such as:
+
+- Route, page, component, or module files that were found.
+- Existing symbols, functions, props, fields, schemas, API types, or configuration keys.
+- Current data source and rendering path.
+- Relevant call sites or references.
+- Confirmed constraints from the codebase.
+
+Before planning, separate:
+
+- Confirmed facts from files or search results.
+- Assumptions that still need validation.
+- Risk boundaries that affect the workflow level.
+
+If evidence is insufficient, continue inspecting or pause and ask the user. Do not produce a generic plan based only on the user request.
+
+For Level S tasks, this thinking may stay brief, but the agent still must not invent targets or facts.
 
 ## Risk Levels
 
@@ -50,7 +80,7 @@ Rules:
 - Keep the change minimal.
 - Do not refactor surrounding code.
 - Do not introduce new dependencies.
-- Summarize changed files and test steps after editing.
+- Summarize changed files, verification performed, and relevant manual checks after editing.
 
 ### Level M: Brief Plan Then Edit
 
@@ -67,17 +97,17 @@ Use Level M for normal scoped changes:
 
 Rules:
 
-- Provide a short plan first.
+- After target and evidence checks, provide a short evidence-backed plan first.
 - If the requirement is clear and low-risk, proceed without waiting for confirmation.
 - Ask only when the requirement is ambiguous.
-- Before classifying a task as Level M, confirm that it does not touch any Level L high-risk area. If it does, upgrade it to Level L.
+- Before classifying a task as Level M, confirm that it does not touch any Level L high-risk area. If it does, upgrade it to Level L and switch to the Level L workflow immediately; do not continue with Level M's direct-edit path.
 - Keep changes focused.
 - Do not modify unrelated files.
-- Summarize changed files, behavior, and test steps after editing.
+- Summarize changed files, behavior, verification performed, and relevant manual checks after editing.
 
 ### Level L: Approval Required
 
-Use Level L for high-risk changes:
+Use Level L for changes to existing systems that do not require architectural redesign, but touch high-risk areas:
 
 - Database schema or migrations.
 - Destructive operations or data migration.
@@ -107,6 +137,14 @@ I’ll treat this as a Level L change because it affects high-risk logic.
 ## Requirement Understanding
 
 ...
+
+## Confirmed Evidence
+
+- ...
+
+## Open Assumptions
+
+- ...
 
 ## Change Scope
 
@@ -141,7 +179,7 @@ Please confirm before I modify the code.
 
 ### Level XL: Design Required
 
-Use Level XL for architecture or module-level changes:
+Use Level XL when the task requires designing from scratch or large-scale restructuring of existing systems:
 
 - New module or backend service.
 - Major refactor.
@@ -174,6 +212,14 @@ I’ll treat this as a Level XL change because it affects architecture/module de
 ## Current Context
 
 ...
+
+## Confirmed Evidence
+
+- ...
+
+## Open Assumptions
+
+- ...
 
 ## Proposed Design
 
@@ -263,7 +309,6 @@ Valid approval examples:
 - OK
 - 好的
 - 那就这样吧
-- 嗯，你真棒
 
 If the user's reply semantically means agreement and does not ask a follow-up question, raise a concern, or add a conflicting requirement, treat it as valid approval.
 
@@ -300,7 +345,7 @@ Verification:
 
 List the verification that was actually performed. If no test or check was run for a Level S or Level M task, say so explicitly and provide the most relevant manual verification steps.
 
-For Level L and Level XL, perform at least one concrete verification before final response. Prefer the most relevant automated test; if that is not available, run a meaningful static check such as targeted reference search, type/lint/build check, configuration validation, or inspection of affected call sites. Do not leave Level L or Level XL verification empty.
+For Level L and Level XL, perform at least one concrete verification before final response. Prefer the most relevant automated test; if that is not available, run a meaningful static check such as targeted reference search, type/lint/build check, configuration validation, or inspection of affected call sites. Do not leave Level L or Level XL verification empty. Verification must pass before the final response is issued. If verification fails, fix the issues first, or explicitly report the failure and its cause to the user before proceeding.
 
 For Level L and Level XL, also include:
 

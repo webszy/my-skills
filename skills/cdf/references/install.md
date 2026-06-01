@@ -9,8 +9,12 @@ Keep the skill at:
 ```text
 skills/cdf/
   SKILL.md
+  README.md
+  README.zh-CN.md
+  skill.json
   agents/openai.yaml
   references/install.md
+  references/karpathy-guidelines.md
 ```
 
 Do not add extra documentation inside the skill folder unless it is required by the agent at runtime.

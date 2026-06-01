@@ -20,6 +20,10 @@
     "claude-code"
   ],
   "entry": "SKILL.md",
+  "references": [
+    "references/karpathy-guidelines.md",
+    "references/install.md"
+  ],
   "install": {
     "codex": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -g -y",
     "claudeCode": "npx skills add https://github.com/webszy/my-skills --skill cdf -a claude-code -g -y",
