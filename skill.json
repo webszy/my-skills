@@ -1,0 +1,30 @@
+{
+  "name": "my-skills",
+  "displayName": "Webszy Skills",
+  "description": "A collection of AI coding agent skills maintained by webszy.",
+  "version": "1.0.0",
+  "author": "webszy",
+  "license": "MIT",
+  "repository": "https://github.com/webszy/my-skills",
+  "type": "collection",
+  "keywords": [
+    "ai-skill",
+    "agent-skill",
+    "codex",
+    "claude-code",
+    "skills-collection"
+  ],
+  "skills": [
+    {
+      "name": "cdf",
+      "displayName": "Controlled Development Flow",
+      "description": "A risk-based development workflow Skill for AI Coding Agents.",
+      "path": "skills/cdf",
+      "platforms": [
+        "codex",
+        "claude-code"
+      ],
+      "install": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y"
+    }
+  ]
+}

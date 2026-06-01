@@ -1,0 +1,28 @@
+{
+  "name": "cdf",
+  "displayName": "Controlled Development Flow",
+  "description": "A risk-based development workflow Skill for AI Coding Agents. Simple changes are edited directly, high-risk changes require approval, and architecture-level changes require design first.",
+  "version": "1.0.0",
+  "author": "webszy",
+  "license": "MIT",
+  "repository": "https://github.com/webszy/my-skills",
+  "keywords": [
+    "ai-skill",
+    "agent-skill",
+    "codex",
+    "claude-code",
+    "workflow",
+    "risk-based-development",
+    "controlled-development-flow"
+  ],
+  "platforms": [
+    "codex",
+    "claude-code"
+  ],
+  "entry": "SKILL.md",
+  "install": {
+    "codex": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -g -y",
+    "claudeCode": "npx skills add https://github.com/webszy/my-skills --skill cdf -a claude-code -g -y",
+    "both": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y"
+  }
+}
