@@ -1,0 +1,4 @@
+interface:
+  display_name: "App Analytics Audit Flow"
+  short_description: "Code-first app analytics audits"
+  default_prompt: "Use $app-analytics-audit-flow to audit my app analytics paths and plan the required reports."

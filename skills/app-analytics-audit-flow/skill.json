@@ -1,0 +1,63 @@
+{
+  "name": "app-analytics-audit-flow",
+  "displayName": "App Analytics Audit Flow",
+  "description": "A code-first app analytics audit workflow Skill for AI Coding Agents. Use when analyzing mobile app growth, advertising monetization, attribution, subscriptions, store analytics, stability data, CSV reports, funnels, retention, paywalls, ads, onboarding, or app optimization.",
+  "version": "1.0.0",
+  "author": "webszy",
+  "license": "MIT",
+  "repository": "https://github.com/webszy/my-skills",
+  "keywords": [
+    "ai-skill",
+    "agent-skill",
+    "codex",
+    "claude-code",
+    "app-analytics",
+    "mobile-growth",
+    "ad-monetization",
+    "attribution",
+    "subscription-analytics",
+    "code-first-audit"
+  ],
+  "platforms": [
+    "codex",
+    "claude-code"
+  ],
+  "entry": "SKILL.md",
+  "references": [
+    "workflows/01-code-audit.md",
+    "workflows/02-report-planning.md",
+    "workflows/03-data-validation.md",
+    "workflows/04-analysis.md",
+    "workflows/05-optimization.md",
+    "prompts/codex-code-audit.md",
+    "prompts/codex-report-planning.md",
+    "prompts/codex-event-tracking-review.md",
+    "prompts/codex-remote-config-review.md",
+    "datasources/firebase.md",
+    "datasources/admob.md",
+    "datasources/app-store-connect.md",
+    "datasources/google-play-console.md",
+    "datasources/adjust.md",
+    "datasources/appsflyer.md",
+    "datasources/revenuecat.md",
+    "datasources/applovin-max.md",
+    "datasources/crashlytics.md",
+    "templates/data-inventory.md",
+    "templates/report-checklist.md",
+    "templates/funnel-plan.md",
+    "templates/analysis-report.md",
+    "templates/optimization-plan.md",
+    "templates/event-tracking-plan.md",
+    "rules/code-first-principles.md",
+    "rules/funnel-validation-rules.md",
+    "rules/monetization-rules.md",
+    "rules/risk-checklist.md",
+    "examples/photo-recovery-case.md",
+    "examples/sample-final-report.md"
+  ],
+  "install": {
+    "codex": "npx skills add https://github.com/webszy/my-skills --skill app-analytics-audit-flow -a codex -g -y",
+    "claudeCode": "npx skills add https://github.com/webszy/my-skills --skill app-analytics-audit-flow -a claude-code -g -y",
+    "both": "npx skills add https://github.com/webszy/my-skills --skill app-analytics-audit-flow -a codex -a claude-code -g -y"
+  }
+}
