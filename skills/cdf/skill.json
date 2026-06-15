@@ -1,7 +1,7 @@
 {
   "name": "cdf",
   "displayName": "Controlled Development Flow",
-  "description": "A risk-based development workflow Skill for AI Coding Agents. Use when invoked as cdf, $cdf, cdf:, or controlled-development-flow. Simple changes are edited directly, high-risk changes require approval, and architecture-level changes require design first.",
+  "description": "A risk-based development workflow Skill for AI Coding Agents. Use when invoked as cdf, $cdf, cdf:, or controlled-development-flow. Clarifies vague requirements before implementation, edits simple changes directly, requires approval for high-risk changes, and requires design first for architecture-level changes.",
   "version": "1.0.0",
   "author": "webszy",
   "license": "MIT",
@@ -21,6 +21,7 @@
   ],
   "entry": "SKILL.md",
   "references": [
+    "references/requirement-gate.md",
     "references/karpathy-guidelines.md",
     "references/install.md"
   ],

@@ -13,6 +13,7 @@ skills/cdf/
   README.zh-CN.md
   skill.json
   agents/openai.yaml
+  references/requirement-gate.md
   references/install.md
   references/karpathy-guidelines.md
 ```

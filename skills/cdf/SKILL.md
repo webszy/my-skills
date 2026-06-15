@@ -1,24 +1,35 @@
 ---
 name: cdf
-description: Use when the user invokes cdf, $cdf, cdf:, or controlled-development-flow, or when Codex or Claude needs to modify code, implement features, fix bugs, refactor modules, change UI or backend behavior, update APIs, adjust data flows, or work in high-risk areas such as database schema, billing, subscriptions, IAP, reports, authentication, permissions, scheduled jobs, queues, production configuration, or architecture design.
+description: Use when the user invokes cdf, $cdf, cdf:, or controlled-development-flow, or when Codex or Claude needs to clarify vague requirements before implementation, modify code, implement features, fix bugs, refactor modules, change UI or backend behavior, update APIs, adjust data flows, or work in high-risk areas such as database schema, billing, subscriptions, IAP, reports, authentication, permissions, scheduled jobs, queues, production configuration, or architecture design.
 ---
 
 # cdf: Controlled Development Flow
 
-Use this skill to choose the lightest safe workflow based on task risk.
+Use this skill to turn vague or risky requests into clear, scoped, evidence-based, and verifiable implementation work, then choose the lightest safe workflow based on task risk.
 
 Core principle:
 
 > Small changes should be fast. Risky changes should be controlled.
 
+## Requirement Gate
+
+Read `references/requirement-gate.md` when the request is vague, underspecified, high-risk, or asks for a spec, PRD, diagnosis, decision memo, or research brief.
+
+That reference contains the full gate: ask classification, definition card, gap list, suggested defaults, clarification response templates, spec and implementation brief outputs, acceptance patterns, examples, and the single authoritative high-risk list.
+
+If the requirement is unclear, output the clarification response from that reference and stop before target existence check or risk classification.
+
 ## Quick Decision Flow
 
-1. Locate the target or search for existing similar targets.
-2. Show concise Requirement Understanding and Requirement Decomposition to the user.
-3. Make an initial risk classification.
-4. Inspect code evidence appropriate to the risk.
-5. Finalize or upgrade the risk level; the stricter rule always wins.
-6. Use the matching workflow.
+1. Run Requirement Gate.
+2. If the requirement is unclear, output a clarification response and stop before implementation.
+3. If the user accepts suggested defaults, treat those defaults as explicit assumptions and continue.
+4. Locate the target or search for existing similar targets.
+5. Show concise Requirement Understanding and Requirement Decomposition to the user.
+6. Make an initial risk classification.
+7. Inspect code evidence appropriate to the risk.
+8. Finalize or upgrade the risk level; the stricter rule always wins.
+9. Use the matching workflow.
 
 If the task is urgent or described as a hotfix, keep the analysis compact, but do not bypass Level L or Level XL approval gates for high-risk areas.
 
@@ -34,13 +45,15 @@ This decision tree and Classification Rules are the same source of truth. If the
 Choose the first matching branch:
 
 1. If the task requires a new service, new module, major refactor, major data-flow redesign, architecture design, or phased rollout, classify as Level XL.
-2. Else if it affects database schema, migrations, destructive data changes, payment, billing, subscription, IAP, revenue, cost, ROI, reports, authentication, permissions, scheduled jobs, queues, retries, idempotency, production configuration, deployment configuration, or environment variables, classify as Level L.
-3. Else if it changes cache invalidation, events, webhooks, message consumers, third-party API integrations, CDN/static asset delivery, localization/i18n, or accessibility/compliance behavior, classify as Level L unless evidence proves the change is purely local display/style/copy with no runtime or business impact.
+2. Else if it touches any High-Risk Areas item in `references/requirement-gate.md`, classify as Level L unless the item itself requires Level XL.
+3. Else if a High-Risk Areas item is mentioned only because of local display/style/copy, classify as Level L unless evidence proves no runtime, workflow, compliance, or business impact.
 4. Else if it changes a scoped interaction, form behavior, validation, local state, small API call, loading state, empty state, filter, or one page flow, classify as Level M.
 5. Else if it is copy, style, spacing, icon size, static UI, or a single-component visual tweak and all Level S conditions are true, classify as Level S.
 6. If evidence points to multiple branches, use the highest risk branch. If evidence is insufficient for final classification, continue inspecting or ask the user; do not downgrade by assumption.
 
 ## Bundled References
+
+For Requirement Gate details, read `references/requirement-gate.md` when the request is vague, underspecified, high-risk, or asks for a spec, PRD, diagnosis, decision memo, research brief, or implementation brief.
 
 For Level M, Level L, and Level XL tasks, read `references/karpathy-guidelines.md` before producing a plan, design, or implementation. Use it to prevent generic planning, overbuilding, scope creep, unrelated edits, and weak verification.
 
@@ -76,54 +89,11 @@ Do not silently create a missing target when the user asked to modify an existin
 
 ## Requirement Understanding
 
-After the target existence check, understand the user's request before planning, classifying, or editing.
-
-This section must be visible to the user. Do not keep requirement understanding only as internal reasoning. For Level S, it may be one concise line.
-
-Identify:
-
-- User intent.
-- Current behavior.
-- Expected behavior.
-- Visible change.
-- Hidden business change, if any.
-
-For simple changes that are likely to remain low-risk, keep this brief. Do not create a long requirement analysis for a copy or style tweak.
-
-Example:
-
-```md
-Understanding: Change the submit button color only. No behavior change.
-```
+After target existence check, restate the actionable request before planning, classifying, or editing. Keep it visible and concise; simple Level S tasks may use one line.
 
 ## Requirement Decomposition
 
-Before risk classification, decompose the requirement into possible impact areas.
-
-This section must be visible to the user before any plan, approval request, or edit. For Level S, it may be one concise line. For Level M, it must be included in the compact plan.
-
-Consider:
-
-- UI / style.
-- Frontend interaction.
-- State management.
-- API request/response.
-- Backend logic.
-- Database schema.
-- Permissions/auth.
-- Scheduled tasks.
-- Cache invalidation.
-- Events, webhooks, and message consumers.
-- Billing/subscription/IAP.
-- Reporting/metrics.
-- Third-party API integrations.
-- CDN/static assets.
-- Localization/i18n.
-- Accessibility/compliance.
-- Production configuration.
-- Tests.
-
-The purpose is to catch hidden risk, not to write a long document. For simple changes, this may be a compact sentence or short list.
+Before risk classification, break the request into the relevant impact areas. Show only what matters, and use the High-Risk Areas list in `references/requirement-gate.md` when deciding whether anything escalates.
 
 ## Initial Risk Classification
 
@@ -171,54 +141,11 @@ Examples:
 
 ## Risk Levels
 
-The levels below are the outcomes of Final Risk Classification.
-
-When examples, the decision tree, and classification conditions disagree, use the highest risk level. A task that looks like a Level S or Level M example still upgrades if any Level L or Level XL condition is present.
+The levels below are the outcomes of Final Risk Classification. When examples, the decision tree, and classification conditions disagree, use the highest risk level.
 
 ## Shared Approval Sections
 
-All pre-edit user-visible outputs must include Requirement Understanding and Requirement Decomposition. Level S may use one concise line. Level M must include them in its compact plan. Level L and Level XL approval outputs must include these shared sections:
-
-- Requirement Understanding.
-- Requirement Decomposition.
-- Confirmed Evidence.
-- Open Assumptions.
-- Risks.
-- Test Plan or Test Strategy.
-
-Keep the section contents specific to the current task. If any shared section cannot be completed from available evidence, continue inspecting or ask the user before requesting approval.
-
-Use this shared approval block for Level L and Level XL; do not duplicate or rewrite these shared sections separately in each level.
-
-When a required output template says `Expand Shared Approval Sections here`, replace that line with the full shared approval block below. Do not print the placeholder literally. The `Risks` and `Test Plan / Test Strategy` sections inside the shared block satisfy the Level L and Level XL requirements to explain risks and provide a test plan; do not write duplicate risk or test sections unless a task-specific subsection is needed.
-
-```md
-## Requirement Understanding
-
-...
-
-## Requirement Decomposition
-
-- ...
-
-## Confirmed Evidence
-
-- ...
-
-## Open Assumptions
-
-- ...
-
-## Risks
-
-- ...
-
-## Test Plan / Test Strategy
-
-1. ...
-2. ...
-3. ...
-```
+All pre-edit user-visible outputs must include Requirement Understanding and Requirement Decomposition. Level L and Level XL approval outputs also need Confirmed Evidence, Open Assumptions, Risks, and Test Plan / Test Strategy.
 
 ### Level S: Direct Edit
 
@@ -293,13 +220,7 @@ I’ll proceed because this is scoped and does not touch high-risk areas.
 
 Use Level L for changes to existing systems that do not require architectural redesign, but touch high-risk areas:
 
-- Database schema or migrations.
-- Destructive operations or data migration.
-- Payment, billing, subscription, IAP, revenue, cost, or ROI logic.
-- Report calculation or business metric logic.
-- Authentication or permission logic.
-- Scheduled jobs, sync tasks, queues, retries, or idempotency.
-- Production configuration, deployment configuration, or environment variables.
+- Any High-Risk Areas item in `references/requirement-gate.md`, unless the item requires Level XL.
 - Multi-module changes with unclear risk.
 
 Rules:
@@ -410,17 +331,14 @@ These rules and the Classification Decision Tree share priority over the example
 Classify as Level S only when all are true:
 
 - The change is visual, copy, style, or static UI behavior.
-- There is no API change.
-- There is no database change.
-- There is no business logic change.
-- There is no cache invalidation, event, webhook, message-consumer, third-party API integration, CDN/static delivery, localization/i18n behavior, or accessibility/compliance behavior change, unless evidence proves the change is purely local display/style/copy with no runtime, workflow, compliance, or business impact.
-- There is no production configuration, data, infrastructure, money, security, scheduled-task, permission, or business-critical runtime impact.
+- It does not touch any High-Risk Areas item in `references/requirement-gate.md`.
+- Any mention of a high-risk area is proven to be purely local display/style/copy with no runtime, workflow, compliance, or business impact.
 
-Classify as Level M when the change is scoped and reversible, and it does not affect high-risk data, money, security, reports, production configuration, scheduled execution, or any Level L-by-default impact area from the decision tree.
+Classify as Level M when the change is scoped and reversible, and it does not touch any High-Risk Areas item.
 
-Before finalizing Level M classification, check the Level L high-risk list. Any overlap forces Level L, even when the change looks small or touches only one API call.
+Before finalizing Level M classification, check High-Risk Areas. Any overlap forces Level L, even when the change looks small or touches only one API call.
 
-Classify as Level L when any high-risk area is affected, even if the file count is small.
+Classify as Level L when any High-Risk Areas item is affected, even if the file count is small.
 
 Classify as Level XL when the task requires architecture, a new module, a new service, a major data-flow change, or phased implementation.
 

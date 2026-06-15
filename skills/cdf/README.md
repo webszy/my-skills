@@ -1,6 +1,6 @@
 # cdf
 
-`cdf` is short for `controlled-development-flow`: a risk-based development workflow Skill for AI Coding Agents.
+`cdf` is short for `controlled-development-flow`: a risk-based development workflow Skill for AI Coding Agents that clarifies vague requirements before implementation.
 
 Invoke it explicitly with `cdf`, `$cdf`, `cdf:`, or `controlled-development-flow`.
 
@@ -8,14 +8,25 @@ It helps agents avoid two common failure modes:
 
 - Over-planning simple changes.
 - Rushing risky changes.
+- Implementing the wrong thing from an ambiguous prompt.
 
 Core principle:
 
 > Small changes should be fast. Risky changes should be controlled.
 
-Quick flow: locate the target, show requirement understanding and decomposition to the user, run the decision tree for initial classification, inspect evidence, run the same tree again for final classification, then use the matching workflow. If examples, the decision tree, and classification conditions disagree, the highest risk level wins.
+Quick flow: run Requirement Gate, pause for clarification if the request is unclear, treat accepted suggested defaults as explicit assumptions, locate the target, show requirement understanding and decomposition to the user, run the decision tree for initial classification, inspect evidence, run the same tree again for final classification, then use the matching workflow. If examples, the decision tree, and classification conditions disagree, the highest risk level wins.
 
 Decision tree: architecture or phased rollout is Level XL; data, money, reports, auth, jobs, production config, cache invalidation, events/webhooks, third-party integrations, CDN/static delivery, localization/i18n behavior, accessibility/compliance behavior, or similar high-risk runtime areas are Level L unless evidence proves a purely local display/style/copy change; scoped interactions and small API/local state changes are Level M; pure copy/style/static single-component tweaks are Level S only when all low-risk conditions hold.
+
+## Requirement Gate
+
+Before CDF chooses a workflow level, it first checks whether the requirement is clear enough to implement.
+
+If the request is vague, ambiguous, underspecified, or missing acceptance criteria, CDF asks targeted clarification questions instead of rushing into code.
+
+The gate uses a compact definition card, gap list, minimal questions, and suggested defaults to help the user quickly reach executable clarity.
+
+This prevents coding agents from implementing the wrong thing from an ambiguous prompt.
 
 ## Compatibility
 
@@ -86,7 +97,7 @@ This must be visible to the user before any plan, approval request, or edit. Thi
 
 ## Risk Classification
 
-The agent should perform an initial classification into Level S, Level M, Level L, or Level XL only after requirement understanding and decomposition.
+The agent should perform an initial classification into Level S, Level M, Level L, or Level XL only after Requirement Gate has passed and after requirement understanding and decomposition.
 
 If decomposition reveals high-risk areas such as data, money, security, permissions, reporting, scheduled tasks, or production configuration, the task should be upgraded to Level L or Level XL even when the visible change looks small.
 
