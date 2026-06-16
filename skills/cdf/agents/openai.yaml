@@ -3,4 +3,4 @@ interface:
   short_description: "Clarifies requirements, then chooses risk-based coding workflow"
   default_prompt: "Use $cdf to clarify vague requirements, then choose the lightest safe workflow for this coding task."
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

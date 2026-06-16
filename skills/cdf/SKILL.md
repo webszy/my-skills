@@ -46,7 +46,7 @@ Choose the first matching branch:
 
 1. If the task requires a new service, new module, major refactor, major data-flow redesign, architecture design, or phased rollout, classify as Level XL.
 2. Else if it touches any High-Risk Areas item in `references/requirement-gate.md`, classify as Level L unless the item itself requires Level XL.
-3. Else if a High-Risk Areas item is mentioned only because of local display/style/copy, classify as Level L unless evidence proves no runtime, workflow, compliance, or business impact.
+3. Else if a High-Risk Areas item is mentioned only because of local display/style/copy, and evidence confirms no runtime, workflow, compliance, or business impact, classify as Level S. If evidence is insufficient or ambiguous, classify as Level L.
 4. Else if it changes a scoped interaction, form behavior, validation, local state, small API call, loading state, empty state, filter, or one page flow, classify as Level M.
 5. Else if it is copy, style, spacing, icon size, static UI, or a single-component visual tweak and all Level S conditions are true, classify as Level S.
 6. If evidence points to multiple branches, use the highest risk branch. If evidence is insufficient for final classification, continue inspecting or ask the user; do not downgrade by assumption.
@@ -147,6 +147,28 @@ The levels below are the outcomes of Final Risk Classification. When examples, t
 
 All pre-edit user-visible outputs must include Requirement Understanding and Requirement Decomposition. Level L and Level XL approval outputs also need Confirmed Evidence, Open Assumptions, Risks, and Test Plan / Test Strategy.
 
+When a Level L or Level XL template says `Expand Shared Approval Sections here`, replace it with:
+
+```md
+## Requirement Understanding
+- [One or two lines restating the actionable request.]
+
+## Requirement Decomposition
+- [Impact areas and components affected.]
+
+## Confirmed Evidence
+- [Files, symbols, schemas, configs, or call sites found and inspected.]
+
+## Open Assumptions
+- [Facts not directly confirmed from code; items that still need validation.]
+
+## Risks
+- [What could go wrong; blast radius; reversibility.]
+
+## Test Plan / Test Strategy
+- [How to verify the change worked and that regressions did not occur.]
+```
+
 ### Level S: Direct Edit
 
 Use Level S for simple, low-risk changes:
@@ -206,6 +228,9 @@ Requirement Decomposition:
 Evidence:
 - ...
 
+Assumptions: (optional — include when any fact is unconfirmed)
+- ...
+
 Risk:
 - ...
 
@@ -259,6 +284,10 @@ Will not change:
 1. ...
 2. ...
 3. ...
+
+## Rollback Plan
+
+- ...
 
 Please confirm before I modify the code.
 ```
@@ -318,6 +347,10 @@ Expand Shared Approval Sections here.
 
 ### Phase 2
 ...
+
+## Rollback Plan
+
+- ...
 
 Please confirm the design before implementation.
 ```
@@ -445,7 +478,8 @@ Verification:
 - ...
 
 Traceability:
-- ...
+- Level S / M: N/A
+- Level L / XL: include current branch and latest commit via `git branch --show-current` and `git log -1 --oneline`; also include release version, deployment version, ticket, or timestamp if available. Write `Unavailable` with reason if git is inaccessible.
 ```
 
 List the verification that was actually performed. If no test or check was run for a Level S or Level M task, say so explicitly and provide the most relevant manual verification steps.
