@@ -13,3 +13,15 @@ Skill 元数据：[skills/cdf/skill.json](skills/cdf/skill.json)
 ```bash
 npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
 ```
+
+# app-analytics-audit-flow
+
+`app-analytics-audit-flow` 是一个 code-first 的移动 App 增长、变现、订阅、归因、商店和稳定性分析 Skill。
+
+查看完整说明：[skills/app-analytics-audit-flow/README.md](skills/app-analytics-audit-flow/README.md)
+
+Skill 元数据：[skills/app-analytics-audit-flow/skill.json](skills/app-analytics-audit-flow/skill.json)
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill app-analytics-audit-flow -a codex -a claude-code -g -y
+```
