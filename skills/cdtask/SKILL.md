@@ -1,14 +1,18 @@
 ---
-
 name: cdtask
-description: Use this skill when the user wants to split an existing requirement document, PRD, technical proposal, or implementation plan into a scoped, reviewable task breakdown for Codex or another coding agent. This skill focuses on scope locking, non-goal protection, dependency-ordered tasks, acceptance criteria, Codex handoff rules, and a final reviewer pass. It does not create a full spec system, does not implement code, and does not execute Codex.
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+description: Use this skill when the user wants to split an existing requirement document, PRD, technical proposal, implementation plan, or approved CDF handoff package into a scoped, reviewable task breakdown for Codex or another coding agent. It can save a designated local task document for deferred execution, but it does not implement source code or execute Codex.
+---
 
 # Scope Locked Task Breakdown
 
 ## Purpose
 
-This skill converts an existing requirement document, PRD, technical proposal, or implementation plan into a scoped task breakdown for a coding agent.
+This skill has two first-class inputs:
+
+* an approved `cdf-cdtask/v1` package that must be saved for deferred execution,
+* a stable manual requirement document, PRD, technical proposal, or implementation plan that must be reviewed and split into tasks.
+
+The CDF path preserves prior scope approval. The manual path remains a planning artifact until CDF or an equivalent risk and approval workflow authorizes implementation.
 
 The goal is not just to create a task list.
 
@@ -29,7 +33,9 @@ This skill does not invoke Codex.
 
 This skill does not create a full lightweight spec system.
 
-This skill only prepares the task breakdown and handoff sections that can be appended to an existing requirement document.
+This skill prepares task breakdown and handoff sections that can be returned in chat, appended to an existing requirement document, or saved as a designated local task document.
+
+It directly accepts the `cdf-cdtask/v1` handoff contract produced when a user chooses `Approve and save as local task` / `同意并保存为本地 task` at a CDF approval gate.
 
 ---
 
@@ -50,6 +56,7 @@ The output is not complete until the Final Review Gate passes.
 This skill may:
 
 * review an existing requirement document,
+* validate a `cdf-cdtask/v1` handoff package,
 * extract in-scope and out-of-scope boundaries,
 * identify non-goals,
 * split the requirement into implementation tasks,
@@ -58,12 +65,13 @@ This skill may:
 * define task-level verification steps,
 * append a scope guard checklist,
 * append Codex handoff rules,
-* perform a final review for ambiguity, conflict, and scope creep.
+* perform a final review for ambiguity, conflict, and scope creep,
+* create or update the single local task document explicitly selected by the user or the CDF handoff contract.
 
 This skill must not:
 
 * implement code,
-* modify project files,
+* modify source code, schemas, migrations, runtime configuration, generated files, tests, or other implementation files,
 * invoke Codex,
 * claim Codex has executed anything,
 * rewrite the whole requirement unless the user explicitly asks,
@@ -85,11 +93,14 @@ Use this skill when the user asks for any of the following:
 * prepare this document for Codex,
 * create a scoped execution plan,
 * convert this clarified requirement into actionable tasks,
+* save an approved CDF scope as a local task for deferred execution,
 * prevent Codex from over-implementing,
 * add Codex handoff rules,
 * review whether this task breakdown is ready for handoff.
 
 Also use this skill when the user has a technical requirement and wants to hand it off to Codex, Claude Code, Cursor, or another coding agent.
+
+Use the CDF handoff path without asking the user to restate the requirement when the input contains a valid `CDF Task Handoff Package` with `Contract-Version: cdf-cdtask/v1`.
 
 ---
 
@@ -107,6 +118,101 @@ Do not use this skill to expand a requirement into future phases unless the user
 
 ---
 
+# Input Routing Decision Tree
+
+Choose the path before producing tasks:
+
+```text
+Valid cdf-cdtask/v1 package?
+  -> Yes: Mode F, source = cdf, approval state comes from the package.
+  -> No: Is the manual requirement stable enough to split?
+       -> Yes: Mode A, B, C, or D, source = manual.
+       -> No: Mode E and recommend CDF when risk classification or approval is still needed.
+```
+
+Manual input must never be labeled `source: cdf` and must never use `approval_state: scope-approved-execution-deferred`.
+
+---
+
+# CDF Handoff Input Contract
+
+The canonical CDF input begins with:
+
+```md
+# CDF Task Handoff Package
+
+Contract-Version: cdf-cdtask/v1
+Handoff-Type: deferred-local-task
+Title: ...
+Workspace: ...
+Requested-Task-Path: ...
+Risk-Level: Level L / Level XL
+Approval-State: scope-approved-execution-deferred
+Source-Branch: ...
+Source-Commit: ...
+```
+
+It must also contain these sections with the exact headings:
+
+1. `Requirement Understanding`
+2. `Requirement Decomposition`
+3. `Confirmed Evidence`
+4. `Open Assumptions`
+5. `Change Scope`, including `Will Change` and `Will Not Change`
+6. `Proposed Design`
+7. `Data Model / API / State Flow`
+8. `Approved Phase Boundary`
+9. `Implementation Plan / Phases`
+10. `Risks`
+11. `Acceptance Criteria`
+12. `Test Plan / Test Strategy`
+13. `Rollback Plan`
+14. `Approval Record`
+15. `Handoff Execution Paths`
+16. `Resume Rules`
+
+For Level XL, `Proposed Design`, `Data Model / API / State Flow`, and `Approved Phase Boundary` must contain the approved design content. For Level L, these headings remain present with `Not applicable for Level L.` so the interface stays structurally stable.
+
+## CDF Package Validation
+
+When this contract is present:
+
+1. Confirm that `Contract-Version` is exactly `cdf-cdtask/v1`.
+2. Confirm that `Handoff-Type` is `deferred-local-task`.
+3. Confirm that `Approval-State` is `scope-approved-execution-deferred`.
+4. Confirm that the approval record says scope is approved and code changes are not authorized in the current turn.
+5. Confirm that every required heading is present and that no blocking placeholder or unresolved conflict remains.
+6. Reuse the approved CDF content as the source of truth. Do not ask the user to repeat already confirmed scope, evidence, risks, or acceptance criteria.
+7. Normalize approval-display labels into the exact package headings before validation. For example, `Will change:` maps to `Will Change`; do not reject a valid package because the prior chat template used different capitalization.
+8. Run the normal Scope Lock, Task Breakdown, Scope Guard, Codex Handoff Rules, and Final Review Gate using that content.
+
+If a required field or section is missing, ask only for the missing information. If the package conflicts with itself, mark it `Not Ready` and do not save a ready task.
+
+The CDF approval authorizes creation of the local task document only. It does not authorize implementation changes in the current turn.
+
+## CDF-to-Scope-Lock Mapping
+
+Apply this mapping without inference:
+
+* `In Scope` <- `Change Scope / Will Change`
+* `Out Of Scope` <- `Change Scope / Will Not Change`
+* `Non-Goals That Must Not Be Implemented` <- copy every explicit prohibition from `Will Not Change`; add only prohibitions already present elsewhere in the package.
+* `Assumptions` <- `Open Assumptions`
+* `Stop Conditions` <- `Resume Rules`, `Code Changes Authorized In This Turn: No`, material-drift rules, and explicit project prohibitions.
+
+Do not invent additional scope, non-goals, or stop conditions while mapping.
+
+## Handoff Execution Paths
+
+A saved CDF task supports two legal execution paths:
+
+* Path A — Same-stack resume: the user requests `Continue local task: <path>`. CDF revalidates the target, evidence, risk, branch, and commit before implementation.
+* Path B — External coding agent: the user explicitly gives the local task to another coding agent and instructs it to implement only the Task Breakdown under the Scope Guard and Codex Handoff Rules.
+
+The task document alone is not execution authorization for either path. External execution is not automatically considered completed by CDF; bring the result back to CDF for verification or closure when CDF-managed completion is required.
+
+---
+
 # Required Workflow
 
 Follow this workflow strictly:
@@ -119,6 +225,7 @@ Requirement Readiness Check
   -> Scope Guard Checklist
   -> Codex Handoff Rules
   -> Final Review Gate
+  -> Save Local Task (only when requested)
 ```
 
 The Final Review Gate is mandatory.
@@ -182,6 +289,8 @@ Please confirm the points above, then I can produce the scoped task breakdown.
 ```
 
 Do not produce a final task breakdown when blocking ambiguity remains.
+
+For a valid `cdf-cdtask/v1` package, treat CDF's Requirement Gate and scope approval as prior readiness evidence. Still perform this readiness check as validation, but do not repeat questions unless a required field is missing, a placeholder remains, or the package conflicts with the current document.
 
 ---
 
@@ -369,6 +478,8 @@ Use this format:
 ```markdown
 # Codex Handoff Rules
 
+These rules govern Path B only after the user explicitly instructs the external coding agent to execute this task. Possession of the document alone is not implementation authorization.
+
 1. Execute tasks strictly in the order listed.
 2. Only implement the content explicitly listed in the task breakdown.
 3. Do not implement anything from the non-goals section.
@@ -459,7 +570,7 @@ Ready / Not Ready / Needs User Confirmation
 2. ...
 
 ## Final Status
-Ready to hand off to Codex / Not ready yet
+Ready for task handoff / Not ready yet
 ```
 
 ---
@@ -473,12 +584,13 @@ If no meaningful ambiguity, conflict, or missing decision remains, mark the docu
 ```markdown
 ## Final Status
 
-Ready to hand off to Codex.
+Ready for task handoff.
 ```
 
 Also include:
 
 ```markdown
+Document readiness does not authorize implementation.
 No blocking ambiguity found.
 No scope conflict found.
 No non-goal violation found.
@@ -542,6 +654,162 @@ Resolution:
 
 ---
 
+# Phase 8: Save Local Task
+
+Run this phase only when the user explicitly requests a local task or when a valid CDF package has `Handoff-Type: deferred-local-task`.
+
+## Storage Path
+
+Choose the target path in this order:
+
+1. Use `Requested-Task-Path` when it contains an explicit path.
+2. Otherwise use `<Workspace>/_cdtask/YYYY-MM-DD-<slug>.md`.
+
+Path rules:
+
+* Resolve relative paths against `Workspace`.
+* Create only the parent directory needed for the task document.
+* Do not modify any implementation file while saving the task.
+* Do not overwrite an existing file silently. When the default filename exists, add a numeric suffix. When an explicit user path exists, ask before replacing it.
+* Store paths in the document relative to `Workspace` where practical; keep `Workspace` itself absolute.
+
+## Local Task File Contract
+
+For a validated CDF package, save the reviewed task document with this frontmatter:
+
+```yaml
+---
+task_contract: cdf-cdtask/v1
+status: ready_for_resume
+source: cdf
+approval_state: scope-approved-execution-deferred
+risk_level: Level L
+workspace: /absolute/workspace/path
+source_branch: branch-or-Unavailable
+source_commit: commit-or-Unavailable
+created_at: YYYY-MM-DDTHH:mm:ssZ
+---
+```
+
+Use `Level XL` when appropriate. Do not invent branch or commit values.
+
+For a manual input saved locally, use this distinct frontmatter:
+
+```yaml
+---
+task_contract: cdtask/v1
+status: ready_for_review
+source: manual
+approval_state: not-approved-by-cdf
+risk_level: Unclassified
+workspace: /absolute/workspace/path
+source_branch: branch-or-Unavailable
+source_commit: commit-or-Unavailable
+created_at: YYYY-MM-DDTHH:mm:ssZ
+---
+```
+
+A manual task is ready for review or handoff planning, not implementation. Before source-code changes, run CDF or an equivalent risk and approval workflow. Never copy CDF approval state into a manual task.
+
+After the frontmatter, use this document order:
+
+```md
+# Local Task: <Title>
+
+## Resume Contract
+- Resume command: `Continue local task: <task-path>`
+- Path A — Same-stack resume: use `cdf`.
+- Path B — External coding agent: the user explicitly instructs that agent to execute only the Task Breakdown under the Scope Guard and Codex Handoff Rules.
+- The task document alone is not execution authorization.
+- For `source: manual`, run CDF or an equivalent approval workflow before any implementation.
+- Revalidate the target, evidence, risk, branch, and commit before editing.
+- For `source: cdf` only, if no material drift exists, the explicit resume request authorizes implementation of the saved scope.
+- If material drift or conflict exists, stop and request approval for the revised plan.
+
+## Approval Record
+...
+
+## Requirement Understanding
+...
+
+## Requirement Decomposition
+...
+
+## Confirmed Evidence
+...
+
+## Open Assumptions
+...
+
+## Proposed Design
+...
+
+## Data Model / API / State Flow
+...
+
+## Approved Phase Boundary
+...
+
+## Scope Lock
+...
+
+## Dependency Order
+...
+
+## Task Breakdown
+...
+
+## Risks
+...
+
+## Acceptance Criteria
+...
+
+## Test Plan / Test Strategy
+...
+
+## Rollback Plan
+...
+
+## Handoff Execution Paths
+...
+
+## Scope Guard Checklist
+...
+
+## Codex Handoff Rules
+...
+
+## Final Review Gate
+...
+```
+
+## Save Verification
+
+After writing the file, read it back and verify:
+
+1. CDF input uses `task_contract: cdf-cdtask/v1`, `source: cdf`, and `status: ready_for_resume`.
+2. Manual input uses `task_contract: cdtask/v1`, `source: manual`, `approval_state: not-approved-by-cdf`, and `status: ready_for_review`.
+3. The workspace and source traceability match the input.
+4. Every required section exists.
+5. The Final Review Gate says the task is ready for its declared destination: resume for CDF input, review or handoff planning for manual input.
+6. No implementation file changed as part of the save flow.
+
+If verification fails, do not claim the task was saved successfully.
+
+## Resume Behavior
+
+When a later request explicitly says `Continue local task: <path>` or `继续执行本地 task：<path>`:
+
+1. Read the entire task document.
+2. Inspect `task_contract`, `source`, `approval_state`, and `status`.
+3. For `source: cdf` with `status: ready_for_resume`, use CDF and re-check the target, current evidence, risk level, branch, and commit before editing.
+4. If nothing material changed, treat the explicit resume request as authorization to implement only the saved CDF scope.
+5. If scope, evidence, architecture, or risk changed materially, do not edit. Produce a revised CDF approval request.
+6. For `source: manual` with `status: ready_for_review`, route through CDF's Requirement Gate, risk classification, evidence inspection, and required approval. The resume request is not implementation authorization.
+
+---
+
 # Completion Definition
 
 This skill is complete only when one of the following outcomes is reached.
@@ -564,8 +832,17 @@ The final task breakdown contains:
 The assistant may say:
 
 ```text
-This task breakdown is ready to hand off to Codex.
+This task breakdown is ready for task handoff. Document readiness does not authorize implementation.
 ```
+
+This outcome means the task document passed the breakdown and handoff quality gates. It does not by itself authorize implementation.
+
+When local saving was requested:
+
+* CDF input is complete only after a verified `cdf-cdtask/v1` file has `status: ready_for_resume`.
+* Manual input is complete only after a verified `cdtask/v1` file has `status: ready_for_review`.
+
+Report the saved path, source, status, and applicable next action.
 
 ## Outcome B: Not Ready
 
@@ -586,6 +863,8 @@ This task breakdown is not ready to hand off yet. The following points need conf
 # Output Modes
 
 Choose one of the following output modes based on the user's request.
+
+Modes A–D use `source: manual` unless their input is a validated CDF package routed to Mode F. If a manual-mode result is saved locally, use `task_contract: cdtask/v1`, `approval_state: not-approved-by-cdf`, and `status: ready_for_review`.
 
 ---
 
@@ -727,6 +1006,35 @@ Please confirm the points above, then I can produce the scoped task breakdown.
 ```
 
 Do not produce a final task breakdown in this mode.
+
+---
+
+## Mode F: CDF Local Task Save
+
+Use when the input is a valid `CDF Task Handoff Package` and the user chose `Approve and save as local task` / `同意并保存为本地 task`.
+
+Process:
+
+1. Validate the `cdf-cdtask/v1` input contract.
+2. Reuse the approved CDF scope without asking the user to restate it.
+3. Produce the Scope Lock, dependency-ordered Task Breakdown, Scope Guard Checklist, Codex Handoff Rules, and Final Review Gate.
+4. Save the complete Local Task File Contract to the requested or default path.
+5. Read the file back and run Save Verification.
+6. Stop without implementing code.
+
+Final response:
+
+```md
+Saved Task:
+- Path: <workspace-relative or absolute task path>
+- Contract-Version: cdf-cdtask/v1
+- Source: cdf
+- Status: ready_for_resume
+- Code Changes: None
+- Resume: Continue local task: <task path>
+```
+
+Do not claim success unless the file exists and Save Verification passes.
 
 ---
 
@@ -884,13 +1192,20 @@ When using this skill:
 6. If ambiguity exists, ask the user to confirm.
 7. If conflict exists, stop and report it.
 8. If a task violates a non-goal, revise the task list before finalizing.
-9. If the task breakdown is ready, explicitly say it is ready to hand off.
+9. If the task breakdown is ready, explicitly say it is ready for task handoff and that document readiness does not authorize implementation.
 10. If the task breakdown is not ready, explicitly say it is not ready and list required confirmations.
 11. Keep future work separate from current tasks.
 12. Make scope boundaries visible.
 13. Prefer strictness over enthusiasm.
 14. Prefer a smaller, safer task list over a broad, impressive one.
-15. End with the current status:
+15. For a valid `cdf-cdtask/v1` package, do not re-ask questions already resolved by CDF.
+16. Modify only the designated local task document when local saving is requested; do not modify implementation files.
+17. Do not claim a local task was saved until Save Verification passes.
+18. Never label manual input as `source: cdf` or copy CDF approval state into it.
+19. Treat "ready for handoff", `ready_for_resume`, and `ready_for_review` as distinct states.
+20. End with the current status:
 
-    * Ready to hand off to Codex.
+    * Ready for task handoff; implementation is not authorized by document readiness alone.
     * Not ready yet; user confirmation required.
+    * Saved locally as `ready_for_resume`.
+    * Saved locally as `ready_for_review`.

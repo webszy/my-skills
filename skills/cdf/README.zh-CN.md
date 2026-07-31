@@ -194,7 +194,7 @@ Agent 行为：
 
 - 不立即修改。
 - 说明需求理解。
-- 定义修改范围、受影响模块，以及必填的“不会修改”边界。
+- 使用 `Will Change` 和 `Will Not Change` 定义修改范围、受影响模块，并给出独立验收标准。
 - 提出实现计划。
 - 说明风险和测试计划。
 - 等待确认后再执行。
@@ -216,6 +216,7 @@ Agent 行为：
 
 - 先产出设计。
 - 将实现拆成有明确边界的阶段。
+- 延期保存为本地 task 时，必须保留已批准的设计、数据/API/状态流、验收标准和当前阶段边界。
 - 对大型或高风险设计，默认按阶段确认。
 - 如果实现中发现设计假设失效，或某个阶段发生实质变化，应暂停并更新设计，重新确认后继续。
 - 避免一次性大范围失控修改。
@@ -229,6 +230,28 @@ Agent 行为：
 ## 审批与验证
 
 对于 Level L 和 Level XL，批准必须明确授权在指定范围内修改代码。`OK`、`好的`、`sounds good`、`そうですね` 或 `pourquoi pas` 这类可能只是“我知道了”的模糊回复不算明确批准，Agent 应要求用户给出明确确认。部分批准只适用于已被批准的子范围。
+
+每个 Level L 和 Level XL 审批请求都提供两个明确选项：
+
+- `Approve and implement` / `同意并修改`：授权修改当前展示范围或当前阶段内的代码。
+- `Approve and save as local task` / `同意并保存为本地 task`：批准当前范围、延期实施，并把 `cdf-cdtask/v1` 交接包交给 `cdtask`。
+
+延期保存选项不授权当前回合修改实现文件。CDTask 会校验交接包、生成按依赖排序的任务拆分、执行最终审查，并以 `status: ready_for_resume` 保存。用户指定路径时优先使用；否则默认保存到当前工作区的 `_cdtask/YYYY-MM-DD-<slug>.md`。
+
+CDF 会在生成交接包或创建本地文件之前检查 CDTask 是否可用。如果 CDTask 不可用，CDF 不创建 `_cdtask`、不保存降级文档，也不自动安装，只输出：
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
+```
+
+安装完成后，用户需要再次选择 `Approve and save as local task` / `同意并保存为本地 task`。
+
+保存后的 task 支持两条路径：
+
+- Path A：用户明确请求 `Continue local task: <path>` 或 `继续执行本地 task：<path>`。CDF 会重新检查目标、代码证据、风险、分支和 commit；没有实质变化时，该请求授权执行已保存范围。
+- Path B：用户明确把 task 交给外部 coding agent。该 Agent 只能实现 Task Breakdown，并遵守 Scope Guard 和 Handoff Rules。CDF 不会自动把外部执行视为完成；需要 CDF 管理收尾时，应把结果带回 CDF 验证或关闭。
+
+文档处于 ready 状态本身不代表获得实施授权。如果存在实质漂移，则必须重新输出审批请求。
 
 如果用户在审批请求后回复的是新需求，而不是明确批准，上一版审批请求应视为过期。Agent 应合并新需求，重新执行分级和证据检查，并为修订后的方案重新请求确认。
 

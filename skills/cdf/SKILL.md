@@ -145,7 +145,7 @@ The levels below are the outcomes of Final Risk Classification. When examples, t
 
 ## Shared Approval Sections
 
-All pre-edit user-visible outputs must include Requirement Understanding and Requirement Decomposition. Level L and Level XL approval outputs also need Confirmed Evidence, Open Assumptions, Risks, and Test Plan / Test Strategy.
+All pre-edit user-visible outputs must include Requirement Understanding and Requirement Decomposition. Level L and Level XL approval outputs also need Confirmed Evidence, Open Assumptions, Acceptance Criteria, Risks, and Test Plan / Test Strategy.
 
 When a Level L or Level XL template says `Expand Shared Approval Sections here`, replace it with:
 
@@ -161,6 +161,9 @@ When a Level L or Level XL template says `Expand Shared Approval Sections here`,
 
 ## Open Assumptions
 - [Facts not directly confirmed from code; items that still need validation.]
+
+## Acceptance Criteria
+- [Observable conditions that define success while preserving the approved scope.]
 
 ## Risks
 - [What could go wrong; blast radius; reversibility.]
@@ -269,10 +272,10 @@ Expand Shared Approval Sections here.
 
 ## Change Scope
 
-Will change:
+### Will Change
 - ...
 
-Will not change:
+### Will Not Change
 - ...
 
 ## Affected Modules
@@ -289,7 +292,10 @@ Will not change:
 
 - ...
 
-Please confirm before I modify the code.
+Choose one:
+
+1. `Approve and implement` / `同意并修改` — authorize code changes for the scope above.
+2. `Approve and save as local task` / `同意并保存为本地 task` — approve the scope above, defer code changes, and save a resumable local task through `cdtask`.
 ```
 
 ### Level XL: Design Required
@@ -348,11 +354,18 @@ Expand Shared Approval Sections here.
 ### Phase 2
 ...
 
+## Approved Phase Boundary
+
+- [State exactly which phase or phases this approval covers.]
+
 ## Rollback Plan
 
 - ...
 
-Please confirm the design before implementation.
+Choose one:
+
+1. `Approve and implement` / `同意并修改` — authorize implementation of the approved design or current phase.
+2. `Approve and save as local task` / `同意并保存为本地 task` — approve the design or current phase, defer code changes, and save a resumable local task through `cdtask`.
 ```
 
 ## Classification Rules
@@ -416,12 +429,138 @@ Do not:
 - Reformat entire files unnecessarily.
 - Change public APIs unless explicitly requested by the user or required by the approved plan.
 
+## Approval Outcomes and CDTask Handoff
+
+At every Level L or Level XL approval gate, offer both approval outcomes below:
+
+1. `Approve and implement` / `同意并修改`
+2. `Approve and save as local task` / `同意并保存为本地 task`
+
+The outcomes authorize different actions:
+
+- `Approve and implement` authorizes implementation changes only for the displayed scope or current approved phase.
+- `Approve and save as local task` approves the displayed scope or current phase for deferred execution. It does not authorize source-code, schema, configuration, generated-file, or implementation changes in the current turn.
+
+When the user chooses `Approve and save as local task`:
+
+1. Stop before implementation.
+2. Check whether `cdtask` is available before generating a handoff package or creating any local file.
+3. If `cdtask` is unavailable, follow the CDTask Availability Gate below and stop.
+4. If `cdtask` is available, produce a `CDF Task Handoff Package` using the exact contract below and pass it to `cdtask` directly. Do not repeat questions already answered by the approved CDF scope.
+5. `cdtask` validates the package, creates the task breakdown, performs its Final Review Gate, and saves the local task document.
+6. End the current implementation flow after the local task is saved.
+
+### CDTask Availability Gate
+
+If `cdtask` is unavailable:
+
+- Do not generate a `CDF Task Handoff Package`.
+- Do not create the `_cdtask` directory.
+- Do not create, append, or modify any local task document.
+- Do not install `cdtask` automatically.
+- Do not claim that anything was saved.
+- Output the exact install command below, then stop:
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
+```
+
+Use this response shape:
+
+```md
+CDTask Required:
+- Saved: No
+- Reason: `cdtask` is not installed or unavailable.
+- Install: `npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y`
+- Next: After installation, choose `Approve and save as local task` / `同意并保存为本地 task` again.
+```
+
+Use this exact handoff contract:
+
+```md
+# CDF Task Handoff Package
+
+Contract-Version: cdf-cdtask/v1
+Handoff-Type: deferred-local-task
+Title: <short task title>
+Workspace: <absolute workspace path>
+Requested-Task-Path: <user-specified path or _cdtask/YYYY-MM-DD-<slug>.md>
+Risk-Level: <Level L or Level XL>
+Approval-State: scope-approved-execution-deferred
+Source-Branch: <current branch or Unavailable>
+Source-Commit: <current commit or Unavailable>
+
+## Requirement Understanding
+- ...
+
+## Requirement Decomposition
+- ...
+
+## Confirmed Evidence
+- ...
+
+## Open Assumptions
+- ...
+
+## Change Scope
+
+### Will Change
+- ...
+
+### Will Not Change
+- ...
+
+## Proposed Design
+- [Required for Level XL. Write `Not applicable for Level L.` otherwise.]
+
+## Data Model / API / State Flow
+- [Required for Level XL. Write `Not applicable for Level L.` otherwise.]
+
+## Approved Phase Boundary
+- [Required for Level XL. Write `Not applicable for Level L.` otherwise.]
+
+## Implementation Plan / Phases
+1. ...
+
+## Risks
+- ...
+
+## Acceptance Criteria
+- ...
+
+## Test Plan / Test Strategy
+- ...
+
+## Rollback Plan
+- ...
+
+## Approval Record
+- User Choice: Approve and save as local task
+- Scope Approved: Yes
+- Code Changes Authorized In This Turn: No
+
+## Handoff Execution Paths
+- Path A — Same-stack resume: the user explicitly requests `Continue local task: <path>` and CDF revalidates before implementation.
+- Path B — External coding agent: the user explicitly hands the task to another coding agent and instructs it to execute only the Task Breakdown under the Scope Guard and Handoff Rules.
+- External execution is not automatically considered completed by CDF. Bring the implementation result back to CDF for verification or closure when CDF-managed completion is required.
+
+## Resume Rules
+- Resume only when the user explicitly asks to continue this saved task.
+- Before editing, re-check the target, current code evidence, branch, and commit.
+- If the approved scope still matches the workspace, the explicit resume request authorizes implementation of that saved scope.
+- If evidence, scope, risk, or architecture has materially changed, stop and request approval for the revised plan.
+```
+
+The contract version and heading names are part of the CDF-to-CDTask interface. Do not rename, omit, or reinterpret them when handing the package to `cdtask`. Normalize the Level L / XL approval display into the exact handoff headings above; the approval template's presentation is not the validation surface.
+
 ## Confirmation Rule
 
 For Level L and Level XL tasks, do not modify code until the user gives explicit approval.
 
 Strong approval examples:
 
+- Approve and implement
+- 同意并修改
 - Confirm
 - Approved
 - Proceed
@@ -434,6 +573,14 @@ Strong approval examples:
 - OK, proceed
 - 那就这样吧
 
+Deferred-task approval examples:
+
+- Approve and save as local task
+- 同意并保存为本地 task
+- 同意并保存为本地任务
+
+A deferred-task approval approves the displayed scope for storage and later execution, but it is not implementation authorization for the current turn. Do not modify implementation files after receiving it.
+
 Treat approval as valid only when the user's reply clearly authorizes code changes for the stated scope and does not ask a follow-up question, raise a concern, add a conflicting requirement, or narrow the scope.
 
 Acknowledgements and vague replies are not approval. This includes "OK" or "好的" when they plausibly mean "I understand", and hedged replies such as "sounds good", "why not", "I guess", "そうですね", or "pourquoi pas". When uncertain, ask for a specific confirmation such as: `Please reply "Approve implementation" or "确认执行" if you want me to modify the code.`
@@ -441,6 +588,10 @@ Acknowledgements and vague replies are not approval. This includes "OK" or "好�
 For non-English replies, use the same rule: the reply must clearly authorize the proposed code changes. If cultural or linguistic ambiguity remains, ask for explicit confirmation.
 
 If the user gives partial or conditional approval, execute only the approved subset. Update the scope, risks, and test plan for that subset before editing. If the condition changes high-risk scope, ask for confirmation again.
+
+When resuming a local task with `Contract-Version: cdf-cdtask/v1`, a clear request such as `Continue local task: <path>` or `继续执行本地 task：<path>` is implementation authorization for the saved scope only after the required target, evidence, branch, and commit re-checks pass. Do not request the same approval again when nothing material has changed. If the saved task conflicts with the current workspace or the plan must expand, update the plan and request approval again.
+
+When the user explicitly hands the saved task to an external coding agent and asks that agent to execute it, the external agent may implement only the saved Task Breakdown and must obey the Scope Guard and Handoff Rules. The task document by itself is not execution authorization. CDF does not automatically mark external execution complete; the user must bring the result back for CDF verification or closure if that lifecycle is desired.
 
 If the user responds to an approval request with a new requirement instead of clear approval, do not treat it as approval and do not edit. Mark the previous approval request as stale, incorporate the new requirement, and rerun target check, requirement understanding, decomposition, evidence inspection, and final risk classification. Then produce an updated Level L approval request or Level XL design request as needed.
 
@@ -464,6 +615,19 @@ Invalid approval examples:
 - Pourquoi pas.
 
 ## Final Response Rule
+
+After a deferred local task is saved, report:
+
+```md
+Saved Task:
+- Path: ...
+- Contract-Version: cdf-cdtask/v1
+- Status: ready_for_resume
+- Code Changes: None
+- Resume: Continue local task: <path>
+```
+
+Do not use the code-change final response for this deferred path.
 
 After code changes, include:
 

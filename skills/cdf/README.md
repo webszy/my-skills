@@ -196,7 +196,7 @@ Agent behavior:
 
 - Do not edit immediately.
 - Explain requirement understanding.
-- Define change scope, affected modules, and a required "Will not change" boundary.
+- Define change scope with `Will Change` and `Will Not Change`, affected modules, and independent acceptance criteria.
 - Propose an implementation plan.
 - Explain risks and test plan.
 - Wait for explicit approval.
@@ -218,6 +218,7 @@ Agent behavior:
 
 - Create a design first.
 - Break implementation into phases with explicit boundaries.
+- Preserve the approved design, data/API/state flow, acceptance criteria, and current phase boundary in any deferred local task.
 - Prefer per-phase approval for large or risky designs.
 - Stop and update the design for approval if implementation invalidates design assumptions or materially changes a phase.
 - Avoid large uncontrolled edits.
@@ -231,6 +232,28 @@ If partial edits have already created syntax errors, broken imports, failed form
 ## Approval and Verification
 
 For Level L and Level XL, approval must clearly authorize code changes for the stated scope. Ambiguous acknowledgements such as `OK`, `好的`, `sounds good`, `そうですね`, or `pourquoi pas` are not enough when they could simply mean "I understand"; the agent should ask for explicit approval. Partial approval applies only to the approved subset.
+
+Every Level L and Level XL approval request offers two explicit outcomes:
+
+- `Approve and implement` / `同意并修改`: authorize code changes for the displayed scope or current phase.
+- `Approve and save as local task` / `同意并保存为本地 task`: approve the scope, defer implementation, and hand a `cdf-cdtask/v1` package to `cdtask`.
+
+The deferred outcome does not authorize implementation changes in the current turn. CDTask validates the package, creates a dependency-ordered task breakdown, runs its final review, and saves it with `status: ready_for_resume`. An explicit path is used when supplied; otherwise the default is `_cdtask/YYYY-MM-DD-<slug>.md` under the current workspace.
+
+CDF checks that CDTask is available before generating the handoff package or creating local files. If CDTask is unavailable, CDF does not create `_cdtask`, does not save a fallback document, and does not install anything automatically. It outputs:
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
+```
+
+After installation, the user chooses `Approve and save as local task` again.
+
+The saved task supports two paths:
+
+- Path A: the user requests `Continue local task: <path>`. CDF re-checks the target, evidence, risk, branch, and commit. If nothing material changed, that request authorizes implementation of the saved scope.
+- Path B: the user explicitly gives the task to an external coding agent. That agent may implement only the Task Breakdown under the Scope Guard and Handoff Rules. CDF does not automatically treat external execution as completed; bring the result back for CDF verification or closure when needed.
+
+Document readiness alone is not implementation authorization. Material drift requires a revised approval request.
 
 If the user replies to an approval request with a new requirement instead of approval, the previous approval request becomes stale. The agent should incorporate the new requirement, rerun classification and evidence checks, and request approval again for the revised plan.
 
