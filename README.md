@@ -14,6 +14,16 @@ Skill metadata: [skills/cdf/skill.json](skills/cdf/skill.json)
 npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
 ```
 
+## cdtask
+
+`cdtask` turns stable requirements, PRDs, technical proposals, or approved CDF handoff packages into scoped, reviewable, dependency-ordered task breakdowns for coding agents. It can save a local task for deferred execution, but it does not implement code itself.
+
+Read the full guide: [skills/cdtask/SKILL.md](skills/cdtask/SKILL.md)
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
+```
+
 ## app-analytics-audit-flow
 
 `app-analytics-audit-flow` is a code-first Skill for mobile app growth, monetization, subscription, attribution, store, and stability analysis.
