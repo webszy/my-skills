@@ -487,7 +487,8 @@ These rules govern Path B only after the user explicitly instructs the external 
 5. Do not modify unrelated files.
 6. If current code conflicts with the requirement document, stop and report the conflict before inventing a solution.
 7. After each task, self-check against that task's acceptance criteria.
-8. After all tasks, output:
+8. After all tasks are complete, proactively perform a code review of the changed files. Fix findings that are within the approved scope; report and stop before addressing findings that would expand scope.
+9. After all tasks, output:
    - changed files,
    - completed tasks,
    - skipped tasks, if any,
