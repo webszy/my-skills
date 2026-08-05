@@ -725,6 +725,7 @@ After the frontmatter, use this document order:
 - Revalidate the target, evidence, risk, branch, and commit before editing.
 - For `source: cdf` only, if no material drift exists, the explicit resume request authorizes implementation of the saved scope.
 - If material drift or conflict exists, stop and request approval for the revised plan.
+- When all implementation and verification for the task are complete, update the frontmatter to `status: completed` and add `completed_at: YYYY-MM-DDTHH:mm:ssZ`.
 
 ## Approval Record
 ...
