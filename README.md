@@ -1,28 +1,26 @@
 # Skills For Webszy
 
-## cdp(controlled-development-planning)
-                    /cdp
-                     │
-                 Orchestrator
-                     │
-        ┌────────────┼────────────┐
-        ↓            ↓            ↓
-       CDP         CDTask      Flow State
-        │            │
-      Plan         Tasks
-                     │
-                  CDRunner
-                     │
-               Executor Agent
-                     │
-                   Diff
-                     │
-                  CDReview
-                     │
-              Reviewer Agent
-                     │
-                Fix / Pass
-`cdp` is short for `controlled-development-planning`, which is a risk-based development workflow Skill for AI Coding Agents.
+This collection includes the evolving Controlled Development Flow suite for controlled planning and tasking workflows, alongside other AI coding agent skills.
+
+The currently available CDF Suite path is:
+
+```text
+Requirement → CDF → CDP → CDF → CDTask → CDF → READY_TO_EXECUTE
+```
+
+## cdf
+
+`cdf` is the control-plane Skill that owns lifecycle state transitions and orchestrates the managed planning-to-tasking flow. The current integration stops before execution runtime.
+
+Read the full guide: [skills/cdf/SKILL.md](skills/cdf/SKILL.md)
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
+```
+
+## cdp (controlled-development-planning)
+
+`cdp` provides evidence-based, risk-aware planning with standalone and CDF-managed workflows.
 
 Read the full guide: [skills/cdp/README.md](skills/cdp/README.md)
 
@@ -36,7 +34,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claud
 
 ## cdtask
 
-`cdtask` turns stable requirements, PRDs, technical proposals, or approved CDP handoff packages into scoped, reviewable, dependency-ordered task breakdowns for coding agents. It can save a local task for deferred execution, but it does not implement code itself.
+`cdtask` turns stable requirements, approved standalone CDP handoffs, or CDF-managed approved plans into scoped, dependency-aware, verifiable execution units. It can optionally persist tasks, but it does not implement or schedule code itself.
 
 Read the full guide: [skills/cdtask/SKILL.md](skills/cdtask/SKILL.md)
 

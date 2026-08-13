@@ -1077,7 +1077,7 @@ Use the approved managed risk level. Do not use `ready_for_resume`, do not add a
 
 `Tasking Status: READY`, persisted artifact `status: tasking_ready`, and CDF lifecycle state `READY_TO_EXECUTE` are distinct concepts and must not be treated as interchangeable. CDTask produces the readiness verdict and may persist the artifact state; only CDF evaluates and enters the lifecycle state.
 
-After the frontmatter, use this document order:
+For `source: cdp` and `source: manual`, use this document order after the frontmatter:
 
 ```md
 # Local Task: <Title>
@@ -1151,16 +1151,66 @@ After the frontmatter, use this document order:
 ...
 ```
 
-For `source: cdf`, replace `Resume Contract`, `Handoff Execution Paths`, and `Codex Handoff Rules` with:
+For `source: cdf`, use this managed document order instead. Do not include the standalone/manual `Dependency Order` section:
 
 ```md
+# Managed Task: <Title>
+
 ## CDF Continuation Contract
 - Execution owner: CDF
 - Next owner: CDF
 - This document is a task definition, not standalone implementation authorization.
 - Return this document to CDF; do not resume it through standalone CDP.
 
+## Approval Record
+...
+
+## Requirement Understanding
+...
+
+## Requirement Decomposition
+...
+
+## Confirmed Evidence
+...
+
+## Open Assumptions
+...
+
+## Proposed Design
+...
+
+## Data Model / API / State Flow
+...
+
+## Approved Phase Boundary
+...
+
+## Scope Lock
+...
+
 ## Dependency Graph
+...
+
+## Dependency Data
+...
+
+## Task Breakdown
+...
+
+## Risks
+...
+
+## Acceptance Criteria
+...
+
+## Test Plan / Test Strategy
+...
+
+## Rollback Plan
+...
+
+## Scope Guard Checklist
 ...
 
 ## Execution Contract
@@ -1169,8 +1219,6 @@ For `source: cdf`, replace `Resume Contract`, `Handoff Execution Paths`, and `Co
 ## Task Readiness Gate
 ...
 ```
-
-Keep the remaining approved-plan, Scope Lock, managed Task Breakdown, risks, acceptance, verification, and rollback sections.
 
 ## Save Verification
 
@@ -1183,7 +1231,8 @@ After writing the file, read it back and verify:
 5. Every required section exists.
 6. The Task Readiness Gate says the task is ready for its declared destination: resume for CDP input, review or handoff planning for manual input, or return to CDF for managed input.
 7. A managed document contains no standalone resume command and names CDF as next owner.
-8. No implementation file changed as part of the save flow.
+8. A managed document contains `Dependency Graph` and `Dependency Data` and does not contain the standalone/manual `Dependency Order` section.
+9. No implementation file changed as part of the save flow.
 
 If verification fails, do not claim the task was saved successfully.
 
@@ -1211,7 +1260,7 @@ The final task breakdown contains:
 
 * scope lock,
 * non-goals,
-* dependency order,
+* dependency order for standalone/manual input, or a Dependency Graph and Dependency Data for managed input,
 * task breakdown,
 * scope guard checklist,
 * the applicable Codex Handoff Rules or managed Execution Contract,
@@ -1244,7 +1293,7 @@ Task Count: N
 Next Owner: CDF
 ```
 
-plus Scope Lock, Dependency Graph, managed Tasks, Execution Contract, and Task Readiness Result. CDTask stops there; it does not invoke CDRunner, an executor, verification execution, or CDReview.
+plus Scope Lock, Dependency Graph, Dependency Data, managed Tasks, Execution Contract, and Task Readiness Result. CDTask stops there; it does not invoke CDRunner, an executor, verification execution, or CDReview.
 
 When persistence occurred, report the saved path, source, status, and applicable next action.
 
@@ -1491,6 +1540,9 @@ Next Owner: CDF
 ## Dependency Graph
 ...
 
+## Dependency Data
+...
+
 ## Tasks
 ...
 
@@ -1624,7 +1676,7 @@ Use this checklist during the Requirement Readiness Check and Task Readiness Gat
 
 # Handoff Document Structure
 
-When producing appendable handoff sections, prefer this final structure:
+For standalone/manual appendable handoff sections, prefer this final structure:
 
 ```markdown
 ---
@@ -1648,6 +1700,41 @@ When producing appendable handoff sections, prefer this final structure:
 ---
 
 # Codex Handoff Rules
+...
+
+---
+
+# Task Readiness Gate
+...
+```
+
+For CDF managed appendable handoff sections, use the DAG structure and do not include `Dependency Order`:
+
+```markdown
+---
+
+# Task Breakdown
+
+## Scope Lock
+...
+
+## Dependency Graph
+...
+
+## Dependency Data
+...
+
+## Tasks
+...
+
+---
+
+# Scope Guard Checklist
+...
+
+---
+
+# Execution Contract
 ...
 
 ---

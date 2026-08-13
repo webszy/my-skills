@@ -1,8 +1,8 @@
 {
   "name": "my-skills",
   "displayName": "Webszy Skills",
-  "description": "A collection of AI coding agent skills maintained by webszy.",
-  "version": "1.0.0",
+  "description": "A collection of AI coding agent skills maintained by webszy, including the evolving Controlled Development Flow suite for controlled planning and tasking workflows.",
+  "version": "1.1.0",
   "author": "webszy",
   "license": "MIT",
   "repository": "https://github.com/webszy/my-skills",
@@ -12,19 +12,46 @@
     "agent-skill",
     "codex",
     "claude-code",
-    "skills-collection"
+    "skills-collection",
+    "controlled-development",
+    "cdf",
+    "planning",
+    "tasking",
+    "ai-coding"
   ],
   "skills": [
     {
+      "name": "cdf",
+      "displayName": "Controlled Development Flow",
+      "description": "Orchestrates controlled AI-assisted development lifecycle gates and the implemented planning-to-tasking flow.",
+      "path": "skills/cdf",
+      "platforms": [
+        "codex",
+        "claude-code"
+      ],
+      "install": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y"
+    },
+    {
       "name": "cdp",
       "displayName": "Controlled Development Planning",
-      "description": "A risk-based development workflow Skill for AI Coding Agents.",
+      "description": "Evidence-based, risk-aware development planning with standalone and CDF-managed workflows.",
       "path": "skills/cdp",
       "platforms": [
         "codex",
         "claude-code"
       ],
       "install": "npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y"
+    },
+    {
+      "name": "cdtask",
+      "displayName": "Controlled Development Task",
+      "description": "Converts approved plans and stable requirements into scoped, dependency-aware, verifiable execution units.",
+      "path": "skills/cdtask",
+      "platforms": [
+        "codex",
+        "claude-code"
+      ],
+      "install": "npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y"
     }
   ]
 }

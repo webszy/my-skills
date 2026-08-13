@@ -1,7 +1,6 @@
 ---
 name: cdf
 description: Controlled Development Flow orchestrator for AI-assisted software development. Use when the user invokes cdf, /cdf, $cdf, cdf:, or controlled-development-flow, or when a development request should move through a controlled lifecycle of planning, approval, tasking, execution, verification, review, fixing, and completion.
-license: MIT
 ---
 
 # CDF: Controlled Development Flow
@@ -417,7 +416,8 @@ PLAN_APPROVED
 → TASKING
 
 Condition:
-The approved plan is stable enough to convert into executable tasks.
+The approved plan is stable enough to convert into executable tasks, and CDF
+has normalized it into a `cdf-cdtask/v1` handoff for CDTask.
 ```
 
 ```text
@@ -425,8 +425,10 @@ TASKING
 → READY_TO_EXECUTE
 
 Condition:
-Required tasks exist and required dependencies, scopes, acceptance criteria,
-and verification expectations are defined.
+CDTask returned `Tasking Status: READY`, its Task Readiness Gate passed,
+executable task definitions exist, and CDF verified the required dependencies,
+write scopes, shared contracts, acceptance criteria, verification expectations,
+and absence of blocking task-definition issues.
 ```
 
 ```text
@@ -1001,30 +1003,181 @@ Standalone `/cdp` behavior is not changed by this rule.
 
 # 19. Task Handoff
 
-After plan approval, CDF should hand the approved planning context to CDTask.
+After plan approval, CDF is the adapter and orchestrator between the approved CDP planning result and CDTask.
 
-Prefer an explicit versioned contract when available.
-
-Do not reconstruct requirements from memory when an approved handoff package already exists.
-
-The handoff should preserve at least:
+The required dependency direction is:
 
 ```text
-Requirement
-Scope
-Evidence
-Assumptions
-Design
-Risks
-Acceptance Criteria
-Verification Strategy
-Approved Phase Boundary
-Execution Metadata
+CDF → CDP
+CDP → CDF
+
+CDF → CDTask
+CDTask → CDF
 ```
 
-The handoff is part of the control boundary.
+The managed planning-to-tasking flow is:
 
-Information should not silently disappear between planning and execution.
+```text
+PLAN_APPROVED
+→ CDF constructs cdf-cdtask/v1
+→ TASKING
+→ CDTask
+→ Task Readiness Gate
+→ CDTask returns READY | NOT_READY | BLOCKED
+→ CDF evaluates the next transition
+```
+
+CDP does not construct or invoke `cdf-cdtask/v1`. After human approval, CDP returns the approved planning result to CDF. CDF preserves that result, constructs the versioned handoff, enters `TASKING`, invokes CDTask, and consumes the tasking result.
+
+## 19.1 CDF Tasking Adapter
+
+CDF must normalize the approved planning result into this contract without silently changing approved meaning:
+
+```md
+# CDF Tasking Handoff
+
+Contract-Version: cdf-cdtask/v1
+Handoff-Type: managed-tasking
+Approval-State: plan-approved
+Execution-Owner: cdf
+Risk-Level: <Level S | Level M | Level L | Level XL>
+Workspace: <absolute path or Unavailable>
+Source-Branch: <branch or Unavailable>
+Source-Commit: <commit or Unavailable>
+
+## Requirement Understanding
+...
+
+## Requirement Decomposition
+...
+
+## Confirmed Evidence
+...
+
+## Open Assumptions
+...
+
+## Change Scope
+
+### Will Change
+...
+
+### Will Not Change
+...
+
+## Proposed Design
+...
+
+## Data Model / API / State Flow
+...
+
+## Approved Phase Boundary
+...
+
+## Implementation Plan / Phases
+...
+
+## Risks
+...
+
+## Acceptance Criteria
+...
+
+## Verification Strategy
+...
+
+## Rollback Plan
+...
+
+## Approval Record
+...
+```
+
+CDF owns adapter fidelity, not task compilation. It must preserve the approved planning content, risk level, human approval, assumptions and unknowns, scope, acceptance criteria, verification strategy, and available workspace metadata. It must not reconstruct the requirement from memory, invent missing implementation decisions, or copy CDTask's detailed validation rules into CDF.
+
+CDTask remains the source of truth for `cdf-cdtask/v1` validation, Scope Lock, dependency analysis, Task Compilation, and the Task Readiness Gate.
+
+## 19.2 CDTask Outcomes
+
+CDF must recognize these managed outcomes while in `TASKING`:
+
+### READY
+
+Expected result:
+
+```text
+Tasking Status: READY
+Contract-Version: cdf-cdtask/v1
+Execution Owner: CDF
+Task Count: N
+Next Owner: CDF
+```
+
+Before entering `READY_TO_EXECUTE`, CDF must verify that:
+
+- the Task Readiness Gate passed;
+- executable task definitions exist;
+- Dependencies are declared;
+- Write Scope is declared or acceptably bounded;
+- Shared Contracts are declared;
+- Acceptance Criteria are defined;
+- Verification requirements are defined;
+- no blocking task-definition issue remains.
+
+Only after these guards pass may CDF perform:
+
+```text
+TASKING → READY_TO_EXECUTE
+```
+
+### NOT_READY
+
+`NOT_READY` means CDTask can repair a task-definition defect wholly inside the approved scope. CDF remains in `TASKING` while CDTask repairs the definition and reruns the Task Readiness Gate.
+
+```text
+Tasking Status: NOT_READY
+```
+
+Do not require renewed human plan approval, enter `REPLANNING`, or begin execution for a repair that introduces no new implementation decision. If repair would change approved meaning, treat the result as `BLOCKED` instead.
+
+### BLOCKED
+
+`BLOCKED` means the approved Plan is missing or conflicts on an implementation-affecting decision, or tasking exposed a scope, architecture, contract, acceptance, verification, or risk issue that cannot be repaired inside approved meaning.
+
+```text
+Tasking Status: BLOCKED
+```
+
+CDTask must not call CDP or independently replan. CDF owns the next transition, normally:
+
+```text
+TASKING → REPLANNING → CDP
+```
+
+When human judgment is required, CDF may instead use:
+
+```text
+TASKING → BLOCKED → Human Escalation
+```
+
+## 19.3 Readiness State Separation
+
+These are distinct concepts:
+
+```text
+Tasking Status: READY
+= CDTask readiness verdict
+
+artifact status: tasking_ready
+= optional persisted CDTask artifact state
+
+READY_TO_EXECUTE
+= CDF lifecycle state
+```
+
+CDF must not enter `READY_TO_EXECUTE` solely because an artifact says `status: tasking_ready`. The `TASKING → READY_TO_EXECUTE` transition remains owned by CDF and requires all transition guards above.
+
+The handoff is part of the control boundary. Information must not silently disappear between planning and tasking.
 
 ---
 
