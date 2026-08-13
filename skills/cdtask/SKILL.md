@@ -1,18 +1,30 @@
 ---
 name: cdtask
-description: Use this skill when the user wants to split an existing requirement document, PRD, technical proposal, implementation plan, or approved CDP handoff package into a scoped, reviewable task breakdown for Codex or another coding agent. It can save a designated local task document for deferred execution, but it does not implement source code or execute Codex.
+description: Use this skill when CDF provides an approved planning result for managed tasking, or when the user wants to split an existing requirement document, PRD, technical proposal, implementation plan, or approved standalone CDP handoff package into scoped, dependency-aware, verifiable execution units. It may optionally persist designated task documents, but it does not implement source code, invoke executors, schedule tasks, or perform implementation review.
 ---
 
-# Scope Locked Task Breakdown
+# Controlled Development Task
 
 ## Purpose
 
-This skill has two first-class inputs:
+CDTask is the task protocol and tasking engine that converts an approved development plan into scoped, dependency-aware, verifiable execution units.
 
+```text
+Approved Plan
+  -> Scope Lock
+  -> Dependency Analysis
+  -> Task Compilation
+  -> Task Readiness Gate
+  -> Executable Task Definitions
+```
+
+This skill has three first-class inputs:
+
+* an approved `cdf-cdtask/v1` planning result from CDF for managed tasking,
 * an approved `cdp-cdtask/v1` package that must be saved for deferred execution,
 * a stable manual requirement document, PRD, technical proposal, or implementation plan that must be reviewed and split into tasks.
 
-The CDP path preserves prior scope approval. The manual path remains a planning artifact until CDP or an equivalent risk and approval workflow authorizes implementation.
+The CDF path preserves prior human plan approval and returns executable task definitions to CDF. The standalone CDP path preserves prior scope approval and local deferred-task behavior. The manual path remains a planning artifact until CDP or an equivalent risk and approval workflow authorizes implementation.
 
 The goal is not just to create a task list.
 
@@ -21,21 +33,25 @@ The goal is to create a handoff-ready task section that:
 * preserves the confirmed requirement boundary,
 * prevents scope creep,
 * protects explicit non-goals,
-* splits work into dependency-ordered tasks,
+* splits work into dependency-aware tasks,
 * gives every task clear acceptance criteria,
 * states what must not change,
-* gives Codex or another coding agent strict handoff rules,
-* performs a final reviewer pass before declaring the document ready.
+* gives the applicable executor strict handoff rules,
+* performs a task-definition readiness pass before declaring tasks ready.
 
 This skill does not implement code.
 
-This skill does not invoke Codex.
+This skill does not invoke CDRunner, Codex, Claude, Grok, or another executor.
+
+This skill describes dependency and conflict facts but does not schedule tasks or decide whether execution is sequential, parallel, or mixed.
+
+This skill does not perform independent implementation review; that belongs to CDReview in CDF-managed flows.
 
 This skill does not create a full lightweight spec system.
 
 This skill prepares task breakdown and handoff sections that can be returned in chat, appended to an existing requirement document, or saved as a designated local task document.
 
-It directly accepts the `cdp-cdtask/v1` handoff contract produced when a user chooses `Approve and save as local task` / `同意并保存为本地 task` at a CDP approval gate.
+It directly accepts the managed `cdf-cdtask/v1` contract from CDF and the existing `cdp-cdtask/v1` handoff contract produced when a user chooses `Approve and save as local task` / `同意并保存为本地 task` at a standalone CDP approval gate.
 
 ---
 
@@ -47,7 +63,7 @@ The assistant must not expand the requirement, add new architecture, add extra f
 
 When in doubt, preserve the smaller scope.
 
-The output is not complete until the Final Review Gate passes.
+The output is not complete until the Task Readiness Gate passes.
 
 ---
 
@@ -56,29 +72,39 @@ The output is not complete until the Final Review Gate passes.
 This skill may:
 
 * review an existing requirement document,
+* validate a `cdf-cdtask/v1` managed planning handoff,
 * validate a `cdp-cdtask/v1` handoff package,
 * extract in-scope and out-of-scope boundaries,
 * identify non-goals,
 * split the requirement into implementation tasks,
-* order tasks by dependency,
+* declare task dependencies as a directed acyclic graph,
+* declare write scope and shared contracts,
 * define task-level acceptance criteria,
 * define task-level verification steps,
 * append a scope guard checklist,
 * append Codex handoff rules,
-* perform a final review for ambiguity, conflict, and scope creep,
-* create or update the single local task document explicitly selected by the user or the CDP handoff contract.
+* produce an executor-neutral managed Execution Contract,
+* perform a Task Readiness Gate for ambiguity, conflict, and scope creep,
+* optionally create or update the single task document explicitly selected by the user, CDF, or the CDP handoff contract.
 
 This skill must not:
 
 * implement code,
 * modify source code, schemas, migrations, runtime configuration, generated files, tests, or other implementation files,
-* invoke Codex,
-* claim Codex has executed anything,
+* invoke CDRunner, Codex, Claude, Grok, or another executor,
+* manage executor processes, sessions, or runtime statuses,
+* schedule tasks or decide the final sequential/parallel/mixed execution strategy,
+* execute implementation verification,
+* perform independent implementation code review, run the fix loop, or declare final lifecycle completion,
+* plan requirements, redesign approved architecture, or define CDF approval policy and flow transitions outside `TASKING`,
+* claim an executor has executed anything,
 * rewrite the whole requirement unless the user explicitly asks,
 * invent missing architecture,
 * silently resolve major ambiguity,
 * include non-goals as current tasks,
 * mark a document as ready when unresolved ambiguity or conflict remains.
+
+CDP owns planning. CDF owns approval policy, flow transitions, scheduling, and lifecycle continuation. CDRunner owns managed execution and verification execution. CDReview owns independent implementation review. In managed mode, CDTask stops after producing task definitions that pass the Task Readiness Gate and returning them to CDF.
 
 ---
 
@@ -102,6 +128,8 @@ Also use this skill when the user has a technical requirement and wants to hand 
 
 Use the CDP handoff path without asking the user to restate the requirement when the input contains a valid `CDP Task Handoff Package` with `Contract-Version: cdp-cdtask/v1`.
 
+Use CDF Managed Tasking Mode without asking the user to restate approved information when CDF supplies a valid `CDF Tasking Handoff` with `Contract-Version: cdf-cdtask/v1`.
+
 ---
 
 # Do Not Use This Skill For
@@ -123,14 +151,133 @@ Do not use this skill to expand a requirement into future phases unless the user
 Choose the path before producing tasks:
 
 ```text
-Valid cdp-cdtask/v1 package?
-  -> Yes: Mode F, source = cdp, approval state comes from the package.
-  -> No: Is the manual requirement stable enough to split?
-       -> Yes: Mode A, B, C, or D, source = manual.
-       -> No: Mode E and recommend CDP when risk classification or approval is still needed.
+Valid cdf-cdtask/v1 package?
+  -> Yes: Mode G, source = cdf, approval state = plan-approved.
+  -> No: Valid cdp-cdtask/v1 package?
+       -> Yes: Mode F, source = cdp, approval state comes from the package.
+       -> No: Is the manual requirement stable enough to split?
+            -> Yes: Mode A, B, C, or D, source = manual.
+            -> No: Mode E and recommend CDP when risk classification or approval is still needed.
 ```
 
 Manual input must never be labeled `source: cdp` and must never use `approval_state: scope-approved-execution-deferred`.
+
+Manual input must also never be labeled `source: cdf`, use `approval_state: plan-approved`, or inherit managed execution authorization.
+
+---
+
+# CDF Managed Tasking Input Contract
+
+`cdf-cdtask/v1` is distinct from `cdp-cdtask/v1`. Do not reuse, reinterpret, or modify the standalone deferred-task contract for managed tasking.
+
+The canonical managed input begins with:
+
+```md
+# CDF Tasking Handoff
+
+Contract-Version: cdf-cdtask/v1
+Handoff-Type: managed-tasking
+Approval-State: plan-approved
+Execution-Owner: cdf
+Risk-Level: <Level S | Level M | Level L | Level XL>
+Workspace: <absolute path or Unavailable>
+Source-Branch: <branch or Unavailable>
+Source-Commit: <commit or Unavailable>
+
+## Requirement Understanding
+...
+
+## Requirement Decomposition
+...
+
+## Confirmed Evidence
+...
+
+## Open Assumptions
+...
+
+## Change Scope
+
+### Will Change
+...
+
+### Will Not Change
+...
+
+## Proposed Design
+...
+
+## Data Model / API / State Flow
+...
+
+## Approved Phase Boundary
+...
+
+## Implementation Plan / Phases
+...
+
+## Risks
+...
+
+## Acceptance Criteria
+...
+
+## Verification Strategy
+...
+
+## Rollback Plan
+...
+
+## Approval Record
+...
+```
+
+## Managed Field Requirements
+
+Require for every risk level:
+
+* `Contract-Version: cdf-cdtask/v1`,
+* `Handoff-Type: managed-tasking`,
+* `Approval-State: plan-approved`,
+* `Execution-Owner: cdf`,
+* `Risk-Level: Level S | Level M | Level L | Level XL`,
+* `Requirement Understanding`,
+* `Change Scope` with `Will Change` and `Will Not Change`,
+* `Acceptance Criteria`,
+* `Verification Strategy`,
+* `Approval Record` confirming human plan approval.
+
+Require when available or relevant: `Requirement Decomposition`, `Confirmed Evidence`, `Open Assumptions`, `Risks`, and workspace/branch/commit metadata. Missing optional metadata must be reported as `Unavailable`; do not invent it.
+
+For Level L and Level XL, require stronger scope boundaries, risk details, and rollback considerations where applicable. For Level XL, require substantive `Proposed Design`, `Data Model / API / State Flow`, `Approved Phase Boundary`, and `Implementation Plan / Phases`.
+
+Do not require Level S or Level M to fill architecture-only sections with meaningless placeholders. Do not upgrade Level S or Level M merely to satisfy the protocol.
+
+## Managed Package Validation
+
+When this contract is present:
+
+1. Validate the exact contract version, handoff type, approval state, execution owner, and supported risk level.
+2. Confirm the Approval Record shows prior human plan approval.
+3. Validate required fields according to risk without weakening higher-risk controls.
+4. Reuse the approved plan as the source of truth. Do not ask the user to repeat approved information.
+5. Validate consistency and task readiness, but do not silently redesign, expand, narrow, or remove constraints from the approved plan.
+6. If task decomposition exposes a blocking conflict, missing required decision, or invalid approved premise, return `Tasking Status: BLOCKED` to CDF. Do not independently replan; CDF may return the flow to CDP.
+7. If a task definition can be repaired without changing approved scope, return it to draft, repair it, and rerun the Task Readiness Gate.
+8. Run Scope Lock, DAG Dependency Analysis, Managed Task Breakdown, Scope Guard Checklist, Execution Contract, and Task Readiness Gate.
+9. By default return the structured result to CDF without saving a file.
+
+## CDF-to-Scope-Lock Mapping
+
+Apply this mapping without expanding the approved plan:
+
+* `In Scope` <- `Change Scope / Will Change`
+* `Out Of Scope` <- `Change Scope / Will Not Change`
+* `Non-Goals That Must Not Be Implemented` <- explicit prohibitions and approved exclusions only
+* `Assumptions` <- `Open Assumptions`
+* `Stop Conditions` <- approval constraints, material conflict, scope expansion, architecture change, risk escalation, unresolved write scope that prevents safe tasking, and explicit project prohibitions
+
+Do not turn future notes into current tasks. Do not invent architecture or remove approved constraints.
 
 ---
 
@@ -184,7 +331,7 @@ When this contract is present:
 5. Confirm that every required heading is present and that no blocking placeholder or unresolved conflict remains.
 6. Reuse the approved CDP content as the source of truth. Do not ask the user to repeat already confirmed scope, evidence, risks, or acceptance criteria.
 7. Normalize approval-display labels into the exact package headings before validation. For example, `Will change:` maps to `Will Change`; do not reject a valid package because the prior chat template used different capitalization.
-8. Run the normal Scope Lock, Task Breakdown, Scope Guard, Codex Handoff Rules, and Final Review Gate using that content.
+8. Run the normal Scope Lock, Task Breakdown, Scope Guard, Codex Handoff Rules, and Task Readiness Gate using that content.
 
 If a required field or section is missing, ask only for the missing information. If the package conflicts with itself, mark it `Not Ready` and do not save a ready task.
 
@@ -223,16 +370,19 @@ Requirement Readiness Check
   -> Dependency Analysis
   -> Task Breakdown
   -> Scope Guard Checklist
-  -> Codex Handoff Rules
-  -> Final Review Gate
-  -> Save Local Task (only when requested)
+  -> Codex Handoff Rules (standalone/manual) OR Execution Contract (CDF managed)
+  -> Task Readiness Gate
+  -> Optional Task Persistence (only when requested or required by standalone CDP handoff)
+  -> Return To CDF (CDF managed) OR Finish Standalone/Manual Path
 ```
 
-The Final Review Gate is mandatory.
+The Task Readiness Gate is mandatory. It is the canonical name for the task-definition quality gate formerly called the Final Review Gate; it is not CDReview and does not inspect implementation code.
+
+When reading an existing standalone/manual task document, accept the legacy `Final Review Gate` heading as the same compatibility gate. New output must use `Task Readiness Gate`.
 
 Do not skip it.
 
-The task breakdown is complete only if the Final Review Gate passes.
+The task breakdown is complete only if the Task Readiness Gate passes.
 
 ---
 
@@ -255,7 +405,7 @@ Evaluate the requirement against these questions:
 11. Are testing or verification expectations clear?
 12. Is it clear whether backend, frontend, shared schema, OpenAPI, client code, tests, or migrations are in scope?
 13. Is it clear what must not be changed?
-14. Is there enough information for Codex to implement without inventing decisions?
+14. Is there enough information for the intended executor to implement without inventing decisions?
 
 If the requirement is ready, continue to Scope Lock.
 
@@ -291,6 +441,8 @@ Please confirm the points above, then I can produce the scoped task breakdown.
 Do not produce a final task breakdown when blocking ambiguity remains.
 
 For a valid `cdp-cdtask/v1` package, treat CDP's Requirement Gate and scope approval as prior readiness evidence. Still perform this readiness check as validation, but do not repeat questions unless a required field is missing, a placeholder remains, or the package conflicts with the current document.
+
+For a valid `cdf-cdtask/v1` package, treat CDP planning and human plan approval as prior readiness evidence. Validate the approved plan without repeating resolved questions. If the plan itself is missing, conflicting, or invalid, return `BLOCKED` to CDF rather than asking CDTask to replan it.
 
 ---
 
@@ -331,21 +483,23 @@ Always include:
 8. If the requirement says not to modify sorting, do not include sorting implementation as a current task.
 9. If the requirement says sorting should only be documented for future work, include it only as documentation or future-note content.
 10. If the requirement says only backend write logic is in scope, do not include frontend, shared schema, OpenAPI, or display tasks.
+11. For `cdf-cdtask/v1`, derive Scope Lock from the approved plan without expanding scope, inventing architecture, silently removing constraints, or converting future notes into current tasks.
+12. If managed decomposition reveals a contradiction in the approved plan, return `BLOCKED` to CDF; do not independently replan.
 
 ---
 
 # Phase 3: Dependency Analysis
 
-Before listing tasks, identify the implementation order.
+Before listing tasks, identify explicit logical dependencies. Do not infer ordering solely from task numbering.
 
-Use this format:
+For standalone/manual compatibility, the existing linear presentation remains valid when the work is actually linear:
 
 ````markdown
 ## Dependency Order
 
 ```text
 Task 1 -> Task 2 -> Task 3 -> Task 4
-````
+```
 
 ### Dependency Notes
 
@@ -363,11 +517,72 @@ Rules:
 5. Tests or verification should come after implementation tasks.
 6. Documentation-only future rules should not become implementation dependencies.
 
+For CDF managed mode, use stable task IDs and DAG-style dependency data:
+
+````markdown
+## Dependency Graph
+
+```text
+TASK-001
+├── TASK-002
+└── TASK-003
+     ↓
+  TASK-004
+```
+
+## Dependency Data
+
+```yaml
+TASK-001:
+  depends_on: []
+TASK-002:
+  depends_on:
+    - TASK-001
+TASK-003:
+  depends_on:
+    - TASK-001
+TASK-004:
+  depends_on:
+    - TASK-002
+    - TASK-003
+```
+
+### Dependency Notes
+
+* `TASK-002` and `TASK-003` each depend on `TASK-001` because ...
+* No explicit dependency is detected between `TASK-002` and `TASK-003`; this is not an instruction to run them in parallel.
+````
+
+Managed dependency rules:
+
+1. Use stable IDs `TASK-001`, `TASK-002`, and so on.
+2. Represent every task in dependency data, including tasks with `depends_on: []`.
+3. Support branches and joins; do not force a linear chain when evidence supports a DAG.
+4. Reject cycles as `NOT_READY` when task-definition repair can resolve them inside approved scope; use `BLOCKED` when the approved plan itself is cyclic or contradictory.
+5. Declare only logical dependencies supported by scope, interfaces, data flow, or implementation order.
+6. CDTask may report that no explicit dependency is detected, but it must not command parallel execution.
+
+## Parallelism Boundary
+
+CDTask supplies `Dependencies`, `Write Scope`, `Shared Contracts`, and `Risk`. CDF decides whether execution is `SEQUENTIAL`, `PARALLEL`, or `MIXED`.
+
+Parallel eligibility requires CDF to evaluate at least:
+
+```text
+No dependency
+AND
+No overlapping write scope
+AND
+No conflicting shared contract
+```
+
+CDTask must produce accurate metadata for this decision but must not make the final scheduling or parallelism decision.
+
 ---
 
 # Phase 4: Task Breakdown
 
-Break the requirement into small, dependency-ordered tasks.
+Break the requirement into small, dependency-aware tasks.
 
 Tasks must be implementation-sized and reviewable.
 
@@ -404,6 +619,68 @@ Describe the specific outcome of this task.
 - Manual verification or test case.
 ````
 
+For CDF managed mode, use this schema for every task:
+
+```markdown
+## TASK-001: <Task Name>
+
+### Goal
+- ...
+
+### Dependencies
+- None
+```
+
+or list stable IDs:
+
+```markdown
+### Dependencies
+- TASK-001
+- TASK-002
+```
+
+Then include:
+
+```markdown
+### Scope
+- ...
+
+### Write Scope
+- `path/...`
+- `path/...`
+
+### Shared Contracts
+- <API / schema / type / state / config / shared interface>
+- None
+
+### Implementation Notes
+- ...
+
+### Acceptance Criteria
+- [ ] ...
+
+### Must Not Change
+- [ ] ...
+
+### Verification
+- ...
+
+### Risk
+- Level S / Level M / Level L / Level XL
+
+### Status
+- <DRAFT | READY>
+```
+
+Managed field rules:
+
+* `Dependencies`: list explicit logical task dependencies. Use `None` only when there are none.
+* `Write Scope`: list concrete files, directories, modules, or bounded implementation areas supported by evidence. If exact files are unknown, write `unresolved` or use a conservative confirmed module boundary; never invent paths.
+* `Shared Contracts`: list API contracts, database schema, shared types, state models, shared configuration, common interfaces, generated contracts, or protocol definitions. Write `None` only when evidence supports no shared contract; never omit the field.
+* `Risk`: inherit the approved Plan risk unless a narrower task-specific risk is known. Never silently downgrade a higher-risk approved Plan in a way that weakens controls.
+* `Status`: keep tasks as draft definitions until the Task Readiness Gate passes. Set every managed task to `READY` only after the gate returns `READY`.
+* Do not use runtime statuses such as `RUNNING`, `COMPLETED`, or `FAILED`; CDF/CDRunner own runtime lifecycle state.
+
 ## Task Design Rules
 
 1. Do not combine unrelated work into one task.
@@ -424,6 +701,8 @@ Describe the specific outcome of this task.
 16. Do not add frontend, schema, OpenAPI, or generated-file tasks unless the requirement explicitly includes them.
 17. Do not add extra tests beyond the requested scope if the user explicitly says only manual verification is required.
 18. Do not omit verification for high-risk changes.
+19. In managed mode, give every task a stable ID, Dependencies, Scope, Write Scope, Shared Contracts, Acceptance Criteria, Must Not Change, Verification, Risk, and Status.
+20. Resolve Write Scope from approved evidence when possible. An explicit `unresolved` value may pass only when the task remains conservatively bounded and the uncertainty is disclosed to CDF; otherwise use `NOT_READY` for a repairable task-definition gap or `BLOCKED` when required evidence or scope authority is missing.
 
 ---
 
@@ -453,11 +732,13 @@ Customize the checklist based on the requirement.
 
 If the requirement contains explicit non-goals, include each non-goal in the checklist.
 
+For managed mode, also include checks that every task has stable Dependencies, a bounded or explicitly unresolved Write Scope, a Shared Contracts declaration, inherited-safe Risk metadata, and no undisclosed write-scope/shared-contract conflict.
+
 ---
 
 # Phase 6: Codex Handoff Rules
 
-Append a handoff protocol when the user intends to give the document to Codex or another coding agent.
+Preserve this compatibility protocol for standalone CDP and manual paths when the user intends to give the document to Codex or another coding agent. Do not use it as the CDF managed contract.
 
 This section is not an instruction for the assistant to execute code.
 
@@ -512,13 +793,46 @@ Examples:
 * Do not add provider/platform/date dimensions.
 * Do not perform unrelated refactors.
 
+## CDF Managed Execution Contract
+
+For `cdf-cdtask/v1`, produce an executor-neutral section with this heading:
+
+```markdown
+# Execution Contract
+```
+
+This contract defines constraints for a future executor assignment. CDTask produces it; CDRunner enforces it and manages execution. It is not authorization for CDTask to invoke an executor.
+
+Use this minimum contract:
+
+```markdown
+# Execution Contract
+
+1. Execute only the assigned current task.
+2. Stay inside the task's Scope and Write Scope.
+3. Obey every Must Not Change item.
+4. Do not implement future, optional, or excluded work.
+5. Do not redesign architecture without escalation through CDF.
+6. Do not modify unrelated files.
+7. If code evidence materially conflicts with the approved task or Plan, stop and report the conflict.
+8. Perform the task's required Verification.
+9. Report changed files.
+10. Report verification performed and actual results.
+11. Report every unmet Acceptance Criterion.
+12. Report any newly discovered assumption, scope expansion, architecture change, shared-contract impact, or risk escalation.
+```
+
+Add plan-specific constraints where needed. Keep the language executor-neutral: the executor may be Codex, Grok, Claude, or another coding agent selected by CDF.
+
+The managed executor may self-check its assigned work and report verification evidence. Do not assign final independent implementation review or the fix loop to the executor; CDReview owns independent implementation review after CDRunner execution and verification.
+
 ---
 
-# Phase 7: Final Review Gate
+# Phase 7: Task Readiness Gate (formerly Final Review Gate)
 
-After appending the task breakdown, scope guard checklist, and Codex handoff rules, review the entire resulting document again from a reviewer perspective.
+After appending the task breakdown, scope guard checklist, and applicable handoff contract, review the entire resulting document from a task-definition quality perspective.
 
-This review is mandatory.
+This gate is mandatory. It checks task definitions, not implementation code, and must not be confused with CDReview.
 
 The assistant must check whether the final document contains:
 
@@ -536,20 +850,30 @@ The assistant must check whether the final document contains:
 12. ambiguity about affected files or modules,
 13. ambiguity about whether frontend, backend, schema, OpenAPI, migration, or tests are in scope,
 14. contradiction between "Non-Goals" and "Task Breakdown",
-15. contradiction between "Scope Lock" and "Codex Handoff Rules",
+15. contradiction between "Scope Lock" and the applicable handoff contract,
 16. contradiction between "first version" constraints and proposed tasks,
-17. missing stop conditions for Codex,
+17. missing stop conditions for the executor,
 18. missing rules for handling code/document conflicts.
+
+For managed tasks also check:
+
+19. missing or unstable task IDs,
+20. missing or invalid DAG dependencies, including cycles,
+21. missing or unsafely unresolved Write Scope,
+22. missing Shared Contracts declarations,
+23. write-scope overlap or shared-contract conflicts that are not disclosed,
+24. missing task Risk or draft/READY state errors,
+25. managed instructions that assign scheduling, execution, or final independent review to CDTask or the executor.
 
 Use this format:
 
 ```markdown
-# Final Review Gate
+# Task Readiness Gate
 
-## Review Verdict
-Ready / Not Ready / Needs User Confirmation
+## Tasking Status
+READY / NOT_READY / BLOCKED
 
-## Reviewer Findings
+## Readiness Findings
 
 ### Confirmed Clear
 - ...
@@ -571,12 +895,18 @@ Ready / Not Ready / Needs User Confirmation
 2. ...
 
 ## Final Status
-Ready for task handoff / Not ready yet
+Ready for task handoff / Not ready yet / Blocked; return to CDF
 ```
+
+Use the managed outcomes precisely:
+
+* `READY`: task definitions pass the gate and may return to CDF as `READY_TO_EXECUTE` candidates. Only after this verdict may managed tasks use `Status: READY`.
+* `NOT_READY`: CDTask can repair task-definition defects inside the approved scope, then rerun the gate.
+* `BLOCKED`: the approved Plan is missing, conflicting, or invalid, or repair would require replanning or new approval. Return the conflict to CDF; do not independently replan.
 
 ---
 
-# Final Review Rules
+# Task Readiness Rules
 
 ## If the document is clear
 
@@ -601,7 +931,7 @@ No non-goal violation found.
 
 If there are unresolved ambiguities, do not mark it as ready.
 
-Ask the user to confirm the missing decisions.
+For standalone/manual input, ask the user to confirm the missing decisions. For managed input, use `BLOCKED` when the approved Plan lacks the required decision or `NOT_READY` when CDTask can repair only the task definition inside approved scope, and return the result to CDF.
 
 Use direct questions.
 
@@ -622,7 +952,7 @@ Not ready yet. User confirmation required before this document can be handed to 
 
 If the requirement contradicts itself, stop and report the conflict.
 
-Do not silently choose one side.
+Do not silently choose one side. In managed mode, return `BLOCKED` to CDF rather than independently replanning.
 
 Example:
 
@@ -655,9 +985,15 @@ Resolution:
 
 ---
 
-# Phase 8: Save Local Task
+# Phase 8: Optional Task Persistence
 
-Run this phase only when the user explicitly requests a local task or when a valid CDP package has `Handoff-Type: deferred-local-task`.
+Run this phase only when:
+
+* the user explicitly requests a local task,
+* a valid CDP package has `Handoff-Type: deferred-local-task`, or
+* CDF explicitly requests persistence for a valid managed result.
+
+CDF managed persistence is optional. The default managed behavior is to return the structured task result to CDF without writing a file. Keep task definition separate from persistence.
 
 ## Storage Path
 
@@ -711,6 +1047,25 @@ created_at: YYYY-MM-DDTHH:mm:ssZ
 ```
 
 A manual task is ready for review or handoff planning, not implementation. Before source-code changes, run CDP or an equivalent risk and approval workflow. Never copy CDP approval state into a manual task.
+
+For a managed CDF input saved only on explicit request, use this distinct frontmatter:
+
+```yaml
+---
+task_contract: cdf-cdtask/v1
+status: ready_to_execute
+source: cdf
+approval_state: plan-approved
+execution_owner: cdf
+risk_level: Level M
+workspace: /absolute/workspace/path
+source_branch: branch-or-Unavailable
+source_commit: commit-or-Unavailable
+created_at: YYYY-MM-DDTHH:mm:ssZ
+---
+```
+
+Use the approved managed risk level. Do not use `ready_for_resume`, do not add a standalone CDP resume command, and do not transfer execution ownership away from CDF.
 
 After the frontmatter, use this document order:
 
@@ -782,9 +1137,30 @@ After the frontmatter, use this document order:
 ## Codex Handoff Rules
 ...
 
-## Final Review Gate
+## Task Readiness Gate
 ...
 ```
+
+For `source: cdf`, replace `Resume Contract`, `Handoff Execution Paths`, and `Codex Handoff Rules` with:
+
+```md
+## CDF Continuation Contract
+- Execution owner: CDF
+- Next owner: CDF
+- This document is a task definition, not standalone implementation authorization.
+- Return this document to CDF; do not resume it through standalone CDP.
+
+## Dependency Graph
+...
+
+## Execution Contract
+...
+
+## Task Readiness Gate
+...
+```
+
+Keep the remaining approved-plan, Scope Lock, managed Task Breakdown, risks, acceptance, verification, and rollback sections.
 
 ## Save Verification
 
@@ -792,10 +1168,12 @@ After writing the file, read it back and verify:
 
 1. CDP input uses `task_contract: cdp-cdtask/v1`, `source: cdp`, and `status: ready_for_resume`.
 2. Manual input uses `task_contract: cdtask/v1`, `source: manual`, `approval_state: not-approved-by-cdp`, and `status: ready_for_review`.
-3. The workspace and source traceability match the input.
-4. Every required section exists.
-5. The Final Review Gate says the task is ready for its declared destination: resume for CDP input, review or handoff planning for manual input.
-6. No implementation file changed as part of the save flow.
+3. Managed CDF input uses `task_contract: cdf-cdtask/v1`, `source: cdf`, `approval_state: plan-approved`, `execution_owner: cdf`, and `status: ready_to_execute`.
+4. The workspace and source traceability match the input.
+5. Every required section exists.
+6. The Task Readiness Gate says the task is ready for its declared destination: resume for CDP input, review or handoff planning for manual input, or return to CDF for managed input.
+7. A managed document contains no standalone resume command and names CDF as next owner.
+8. No implementation file changed as part of the save flow.
 
 If verification fails, do not claim the task was saved successfully.
 
@@ -809,6 +1187,7 @@ When a later request explicitly says `Continue local task: <path>` or `继续执
 4. If nothing material changed, treat the explicit resume request as authorization to implement only the saved CDP scope.
 5. If scope, evidence, architecture, or risk changed materially, do not edit. Produce a revised CDP approval request.
 6. For `source: manual` with `status: ready_for_review`, route through CDP's Requirement Gate, risk classification, evidence inspection, and required approval. The resume request is not implementation authorization.
+7. For `source: cdf`, `execution_owner: cdf`, or `task_contract: cdf-cdtask/v1`, do not implement or route through standalone CDP resume behavior. Return the task to CDF for lifecycle continuation.
 
 ---
 
@@ -825,8 +1204,8 @@ The final task breakdown contains:
 * dependency order,
 * task breakdown,
 * scope guard checklist,
-* Codex handoff rules,
-* final review result,
+* the applicable Codex Handoff Rules or managed Execution Contract,
+* Task Readiness Gate result,
 * no unresolved ambiguity,
 * no unresolved conflict,
 * no non-goal violation.
@@ -843,8 +1222,21 @@ When local saving was requested:
 
 * CDP input is complete only after a verified `cdp-cdtask/v1` file has `status: ready_for_resume`.
 * Manual input is complete only after a verified `cdtask/v1` file has `status: ready_for_review`.
+* Managed CDF input is complete only after a verified `cdf-cdtask/v1` file has `status: ready_to_execute`, `execution_owner: cdf`, and no standalone resume command.
 
-Report the saved path, source, status, and applicable next action.
+For managed CDF input without persistence, completion means the structured result passed the Task Readiness Gate and was returned to CDF with:
+
+```text
+Tasking Status: READY
+Contract-Version: cdf-cdtask/v1
+Execution Owner: CDF
+Task Count: N
+Next Owner: CDF
+```
+
+plus Scope Lock, Dependency Graph, managed Tasks, Execution Contract, and Task Readiness Result. CDTask stops there; it does not invoke CDRunner, an executor, verification execution, or CDReview.
+
+When persistence occurred, report the saved path, source, status, and applicable next action.
 
 ## Outcome B: Not Ready
 
@@ -852,7 +1244,7 @@ The document still contains unresolved ambiguity, conflict, or missing decisions
 
 The assistant must not claim the document is complete.
 
-The assistant must ask the user for confirmation.
+For standalone/manual input, ask the user for confirmation. For managed input, return `NOT_READY` only when CDTask can repair the task definition within approved scope; otherwise return `BLOCKED` to CDF.
 
 The assistant may say:
 
@@ -860,13 +1252,28 @@ The assistant may say:
 This task breakdown is not ready to hand off yet. The following points need confirmation first.
 ```
 
+## Outcome C: Blocked
+
+Use for CDF managed input when the approved Plan itself is missing, conflicting, invalid, or requires new planning/approval authority.
+
+Return:
+
+```text
+Tasking Status: BLOCKED
+Contract-Version: cdf-cdtask/v1
+Execution Owner: CDF
+Next Owner: CDF
+```
+
+List the exact blocking conflicts and required CDF decision. Do not independently replan, invoke CDP, or begin execution.
+
 ---
 
 # Output Modes
 
 Choose one of the following output modes based on the user's request.
 
-Modes A–D use `source: manual` unless their input is a validated CDP package routed to Mode F. If a manual-mode result is saved locally, use `task_contract: cdtask/v1`, `approval_state: not-approved-by-cdp`, and `status: ready_for_review`.
+Modes A–D use `source: manual` unless their input is a validated CDP package routed to Mode F or a validated CDF package routed to Mode G. If a manual-mode result is saved locally, use `task_contract: cdtask/v1`, `approval_state: not-approved-by-cdp`, and `status: ready_for_review`.
 
 ---
 
@@ -926,7 +1333,7 @@ Output:
 # Codex Handoff Rules
 ...
 
-# Final Review Gate
+# Task Readiness Gate
 ...
 ```
 
@@ -961,7 +1368,7 @@ Output only the sections that should be appended:
 
 ---
 
-# Final Review Gate
+# Task Readiness Gate
 
 ...
 ```
@@ -974,7 +1381,7 @@ Do not repeat the entire original document unless the user explicitly requests t
 
 Use when the user explicitly asks for the full modified original document.
 
-Output the complete requirement document with the task breakdown, scope guard checklist, Codex handoff rules, and Final Review Gate appended.
+Output the complete requirement document with the task breakdown, scope guard checklist, Codex handoff rules, and Task Readiness Gate appended.
 
 ---
 
@@ -1019,7 +1426,7 @@ Process:
 
 1. Validate the `cdp-cdtask/v1` input contract.
 2. Reuse the approved CDP scope without asking the user to restate it.
-3. Produce the Scope Lock, dependency-ordered Task Breakdown, Scope Guard Checklist, Codex Handoff Rules, and Final Review Gate.
+3. Produce the Scope Lock, dependency-aware Task Breakdown, Scope Guard Checklist, Codex Handoff Rules, and Task Readiness Gate.
 4. Save the complete Local Task File Contract to the requested or default path.
 5. Read the file back and run Save Verification.
 6. Stop without implementing code.
@@ -1037,6 +1444,57 @@ Saved Task:
 ```
 
 Do not claim success unless the file exists and Save Verification passes.
+
+---
+
+## Mode G: CDF Managed Tasking
+
+Use when the input is a valid `CDF Tasking Handoff` with `Contract-Version: cdf-cdtask/v1`.
+
+Process:
+
+1. Validate the managed contract and prior plan approval without asking the user to repeat approved information.
+2. Derive Scope Lock from the approved Plan.
+3. Build the DAG Dependency Graph and managed task definitions with stable IDs, Dependencies, Write Scope, Shared Contracts, Acceptance Criteria, Must Not Change, Verification, Risk, and draft status.
+4. Produce the Scope Guard Checklist and executor-neutral Execution Contract.
+5. Run the Task Readiness Gate.
+6. If `NOT_READY`, repair only task-definition defects inside approved scope and rerun the gate.
+7. If `BLOCKED`, return the blocking Plan conflict or missing authority to CDF without replanning.
+8. If `READY`, set every task to `Status: READY` and return the structured result to CDF.
+9. Save a managed task document only when CDF or the user explicitly requests persistence, then run Save Verification.
+10. Stop before execution. Do not invoke CDRunner or any executor.
+
+Output:
+
+```md
+Tasking Status: READY
+Contract-Version: cdf-cdtask/v1
+Execution Owner: CDF
+Task Count: <N>
+Next Owner: CDF
+
+## Scope Lock
+...
+
+## Dependency Graph
+...
+
+## Tasks
+...
+
+# Scope Guard Checklist
+...
+
+# Execution Contract
+...
+
+# Task Readiness Gate
+...
+```
+
+For `NOT_READY` or `BLOCKED`, replace the status and report exact readiness defects or approved-Plan conflicts. Do not mark draft tasks `READY` and do not cross into `EXECUTING`.
+
+`Tasking Status: READY` means the task definitions are candidates for CDF's `TASKING → READY_TO_EXECUTE` transition. CDTask does not perform that transition or choose the execution strategy.
 
 ---
 
@@ -1092,13 +1550,13 @@ Reject or revise task lists that include these problems:
 17. Modifying frontend types when backend response is unchanged.
 18. Updating generated files without explicit scope.
 19. Making assumptions about business logic without marking them.
-20. Marking a document ready before final review.
+20. Marking a document ready before the Task Readiness Gate.
 
 ---
 
 # Requirement Review Checklist
 
-Use this checklist during the Requirement Readiness Check and Final Review Gate.
+Use this checklist during the Requirement Readiness Check and Task Readiness Gate.
 
 ```markdown
 ## Requirement Review Checklist
@@ -1134,12 +1592,20 @@ Use this checklist during the Requirement Readiness Check and Final Review Gate.
 - [ ] Test scope is clear.
 
 ### Handoff
-- [ ] Tasks are ordered by dependency.
+- [ ] Tasks declare their dependencies.
 - [ ] Each task has acceptance criteria.
 - [ ] Each task has verification.
 - [ ] Each task has "Must Not Change".
-- [ ] Codex handoff rules are included.
-- [ ] Final Review Gate passes.
+- [ ] The applicable Codex Handoff Rules or managed Execution Contract is included.
+- [ ] Task Readiness Gate passes.
+
+### CDF Managed Metadata
+- [ ] Every task has a stable Task ID.
+- [ ] Every task has Dependencies, Write Scope, Shared Contracts, Risk, and draft/READY status.
+- [ ] Dependency data is acyclic and supports DAG branches and joins.
+- [ ] The Execution Contract is executor-neutral.
+- [ ] CDF, not CDTask, owns scheduling and lifecycle continuation.
+- [ ] CDReview, not the executor, owns independent implementation review.
 ```
 
 ---
@@ -1174,7 +1640,7 @@ When producing appendable handoff sections, prefer this final structure:
 
 ---
 
-# Final Review Gate
+# Task Readiness Gate
 ...
 ```
 
@@ -1187,12 +1653,12 @@ If the user asks to append to an existing document, output only the appended sec
 When using this skill:
 
 1. Do not implement code.
-2. Do not invoke Codex.
-3. Do not claim Codex executed anything.
-4. Do not claim the handoff task breakdown is ready until the Final Review Gate passes.
-5. Always review the final appended sections as a reviewer.
-6. If ambiguity exists, ask the user to confirm.
-7. If conflict exists, stop and report it.
+2. Do not invoke CDRunner, Codex, Claude, Grok, or another executor.
+3. Do not claim an executor ran anything.
+4. Do not claim the handoff task breakdown is ready until the Task Readiness Gate passes.
+5. Always review the final appended sections for task-definition quality.
+6. If ambiguity exists in standalone/manual input, ask the user to confirm. For managed input, return `NOT_READY` for repairable task-definition ambiguity or `BLOCKED` for a Plan-level decision gap.
+7. If conflict exists, stop and report it. For managed input, return the conflict to CDF and do not independently replan.
 8. If a task violates a non-goal, revise the task list before finalizing.
 9. If the task breakdown is ready, explicitly say it is ready for task handoff and that document readiness does not authorize implementation.
 10. If the task breakdown is not ready, explicitly say it is not ready and list required confirmations.
@@ -1201,13 +1667,19 @@ When using this skill:
 13. Prefer strictness over enthusiasm.
 14. Prefer a smaller, safer task list over a broad, impressive one.
 15. For a valid `cdp-cdtask/v1` package, do not re-ask questions already resolved by CDP.
-16. Modify only the designated local task document when local saving is requested; do not modify implementation files.
-17. Do not claim a local task was saved until Save Verification passes.
-18. Never label manual input as `source: cdp` or copy CDP approval state into it.
-19. Treat "ready for handoff", `ready_for_resume`, and `ready_for_review` as distinct states.
-20. End with the current status:
+16. For a valid `cdf-cdtask/v1` package, preserve prior plan approval and return `READY`, `NOT_READY`, or `BLOCKED` to CDF without replanning.
+17. Modify only the designated task document when local saving is requested; do not modify implementation files.
+18. Do not claim a local task was saved until Save Verification passes.
+19. Never label manual input as `source: cdp` or `source: cdf`, or copy either approval state into it.
+20. Treat "ready for handoff", `ready_for_resume`, `ready_for_review`, and `ready_to_execute` as distinct states.
+21. Do not decide scheduling or final sequential/parallel/mixed execution strategy.
+22. Do not assign independent final implementation review to a managed executor; CDReview owns it.
+23. Stop managed flow before `EXECUTING` and return it to CDF.
+24. End with the current status:
 
     * Ready for task handoff; implementation is not authorized by document readiness alone.
     * Not ready yet; user confirmation required.
     * Saved locally as `ready_for_resume`.
     * Saved locally as `ready_for_review`.
+    * Tasking `READY`, `NOT_READY`, or `BLOCKED`; next owner CDF.
+    * Saved managed task as `ready_to_execute`; next owner CDF.
