@@ -16,15 +16,15 @@
   ],
   "skills": [
     {
-      "name": "cdf",
-      "displayName": "Controlled Development Flow",
+      "name": "cdp",
+      "displayName": "Controlled Development Planning",
       "description": "A risk-based development workflow Skill for AI Coding Agents.",
-      "path": "skills/cdf",
+      "path": "skills/cdp",
       "platforms": [
         "codex",
         "claude-code"
       ],
-      "install": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y"
+      "install": "npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y"
     }
   ]
 }

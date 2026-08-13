@@ -1,22 +1,42 @@
 # Skills For Webszy
 
-## cdf
+## cdp(controlled-development-planning)
+                    /cdp
+                     │
+                 Orchestrator
+                     │
+        ┌────────────┼────────────┐
+        ↓            ↓            ↓
+       CDP         CDTask      Flow State
+        │            │
+      Plan         Tasks
+                     │
+                  CDRunner
+                     │
+               Executor Agent
+                     │
+                   Diff
+                     │
+                  CDReview
+                     │
+              Reviewer Agent
+                     │
+                Fix / Pass
+`cdp` is short for `controlled-development-planning`, which is a risk-based development workflow Skill for AI Coding Agents.
 
-`cdf` is short for `controlled-development-flow`, which is a risk-based development workflow Skill for AI Coding Agents.
-
-Read the full guide: [skills/cdf/README.md](skills/cdf/README.md)
+Read the full guide: [skills/cdp/README.md](skills/cdp/README.md)
 
 Repository metadata: [skill.json](skill.json)
 
-Skill metadata: [skills/cdf/skill.json](skills/cdf/skill.json)
+Skill metadata: [skills/cdp/skill.json](skills/cdp/skill.json)
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
 ```
 
 ## cdtask
 
-`cdtask` turns stable requirements, PRDs, technical proposals, or approved CDF handoff packages into scoped, reviewable, dependency-ordered task breakdowns for coding agents. It can save a local task for deferred execution, but it does not implement code itself.
+`cdtask` turns stable requirements, PRDs, technical proposals, or approved CDP handoff packages into scoped, reviewable, dependency-ordered task breakdowns for coding agents. It can save a local task for deferred execution, but it does not implement code itself.
 
 Read the full guide: [skills/cdtask/SKILL.md](skills/cdtask/SKILL.md)
 

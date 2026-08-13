@@ -1,8 +1,8 @@
-# cdf
+# cdp
 
-`cdf` is short for `controlled-development-flow`: a risk-based development workflow Skill for AI Coding Agents that clarifies vague requirements before implementation.
+`cdp` is short for `controlled-development-planning`: a risk-based development workflow Skill for AI Coding Agents that clarifies vague requirements before implementation.
 
-Invoke it explicitly with `cdf`, `$cdf`, `cdf:`, or `controlled-development-flow`.
+Invoke it explicitly with `cdp`, `$cdp`, `cdp:`, or `controlled-development-planning`.
 
 It helps agents avoid two common failure modes:
 
@@ -20,9 +20,9 @@ Decision tree: architecture or phased rollout is Level XL; data, money, reports,
 
 ## Requirement Gate
 
-Before CDF chooses a workflow level, it first checks whether the requirement is clear enough to implement.
+Before CDP chooses a workflow level, it first checks whether the requirement is clear enough to implement.
 
-If the request is vague, ambiguous, underspecified, or missing acceptance criteria, CDF asks targeted clarification questions instead of rushing into code.
+If the request is vague, ambiguous, underspecified, or missing acceptance criteria, CDP asks targeted clarification questions instead of rushing into code.
 
 The gate uses a compact definition card, gap list, minimal questions, and suggested defaults to help the user quickly reach executable clarity.
 
@@ -30,25 +30,25 @@ This prevents coding agents from implementing the wrong thing from an ambiguous 
 
 ## Compatibility
 
-`cdf` follows the Agent Skills `SKILL.md` format used by Codex and Claude Code:
+`cdp` follows the Agent Skills `SKILL.md` format used by Codex and Claude Code:
 
-- Skill folder: `skills/cdf/`
-- Skill entrypoint: `skills/cdf/SKILL.md`
-- Skill name: `cdf`
-- Skill metadata: `skills/cdf/skill.json`
-- Codex UI metadata: `skills/cdf/agents/openai.yaml`
+- Skill folder: `skills/cdp/`
+- Skill entrypoint: `skills/cdp/SKILL.md`
+- Skill name: `cdp`
+- Skill metadata: `skills/cdp/skill.json`
+- Codex UI metadata: `skills/cdp/agents/openai.yaml`
 
 The folder name and `SKILL.md` frontmatter `name` match intentionally. This keeps the skill compatible with the Agent Skills specification and makes the short invocation stable.
 
 ## Bundled References
 
-`cdf` includes `references/karpathy-guidelines.md` as a bundled MIT-licensed reference for coding-agent guardrails: think before coding, keep changes simple, make surgical edits, and define verifiable success criteria.
+`cdp` includes `references/karpathy-guidelines.md` as a bundled MIT-licensed reference for coding-agent guardrails: think before coding, keep changes simple, make surgical edits, and define verifiable success criteria.
 
 For Level M, Level L, and Level XL tasks, the agent must read this reference before producing a plan, design, or implementation. For Level S tasks, reading it is optional so simple changes stay lightweight. Read it for Level S only when target search finds objective signals such as shared code used by multiple modules, more than five references, more than one touched file/module, shared design tokens or primitives, a failed previous attempt, or overlap with high-risk paths.
 
 The reference is included so users do not need to install `karpathy-guidelines` separately.
 
-If `references/karpathy-guidelines.md` is unavailable in an installed copy, the agent should continue with the cdf rules as the source of truth and mention that the supporting reference was unavailable.
+If `references/karpathy-guidelines.md` is unavailable in an installed copy, the agent should continue with the cdp rules as the source of truth and mention that the supporting reference was unavailable.
 
 ## Target Existence Check
 
@@ -236,11 +236,11 @@ For Level L and Level XL, approval must clearly authorize code changes for the s
 Every Level L and Level XL approval request offers two explicit outcomes:
 
 - `Approve and implement` / `同意并修改`: authorize code changes for the displayed scope or current phase.
-- `Approve and save as local task` / `同意并保存为本地 task`: approve the scope, defer implementation, and hand a `cdf-cdtask/v1` package to `cdtask`.
+- `Approve and save as local task` / `同意并保存为本地 task`: approve the scope, defer implementation, and hand a `cdp-cdtask/v1` package to `cdtask`.
 
 The deferred outcome does not authorize implementation changes in the current turn. CDTask validates the package, creates a dependency-ordered task breakdown, runs its final review, and saves it with `status: ready_for_resume`. An explicit path is used when supplied; otherwise the default is `_cdtask/YYYY-MM-DD-<slug>.md` under the current workspace.
 
-CDF checks that CDTask is available before generating the handoff package or creating local files. If CDTask is unavailable, CDF does not create `_cdtask`, does not save a fallback document, and does not install anything automatically. It outputs:
+CDP checks that CDTask is available before generating the handoff package or creating local files. If CDTask is unavailable, CDP does not create `_cdtask`, does not save a fallback document, and does not install anything automatically. It outputs:
 
 ```bash
 npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
@@ -250,8 +250,8 @@ After installation, the user chooses `Approve and save as local task` again.
 
 The saved task supports two paths:
 
-- Path A: the user requests `Continue local task: <path>`. CDF re-checks the target, evidence, risk, branch, and commit. If nothing material changed, that request authorizes implementation of the saved scope.
-- Path B: the user explicitly gives the task to an external coding agent. That agent may implement only the Task Breakdown under the Scope Guard and Handoff Rules. CDF does not automatically treat external execution as completed; bring the result back for CDF verification or closure when needed.
+- Path A: the user requests `Continue local task: <path>`. CDP re-checks the target, evidence, risk, branch, and commit. If nothing material changed, that request authorizes implementation of the saved scope.
+- Path B: the user explicitly gives the task to an external coding agent. That agent may implement only the Task Breakdown under the Scope Guard and Handoff Rules. CDP does not automatically treat external execution as completed; bring the result back for CDP verification or closure when needed.
 
 Document readiness alone is not implementation authorization. Material drift requires a revised approval request.
 
@@ -266,17 +266,17 @@ For Level L and Level XL, final responses should include a structured Traceabili
 Install for Codex:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -g -y
 ```
 
 Install for Claude Code:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdf -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a claude-code -g -y
 ```
 
 Install for both:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
 ```

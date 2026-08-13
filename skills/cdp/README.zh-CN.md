@@ -1,8 +1,8 @@
-# cdf
+# cdp
 
-`cdf` 是 `controlled-development-flow` 的简称：一个面向 AI Coding Agent 的风险分级开发工作流 Skill，会在实现前先澄清模糊需求。
+`cdp` 是 `controlled-development-planning` 的简称：一个面向 AI Coding Agent 的风险分级开发工作流 Skill，会在实现前先澄清模糊需求。
 
-可以用 `cdf`、`$cdf`、`cdf:` 或 `controlled-development-flow` 显式调用。
+可以用 `cdp`、`$cdp`、`cdp:` 或 `controlled-development-planning` 显式调用。
 
 它帮助 Agent 避免两类常见问题：
 
@@ -20,33 +20,33 @@
 
 ## 需求闸门
 
-CDF 在选择工作流等级前，会先判断需求是否达到可执行清晰度。
+CDP 在选择工作流等级前，会先判断需求是否达到可执行清晰度。
 
-如果用户请求模糊、不完整、有歧义，或者缺少验收标准，CDF 会先输出需求定义卡、缺口清单、最少追问和建议默认值，而不是直接进入代码实现。
+如果用户请求模糊、不完整、有歧义，或者缺少验收标准，CDP 会先输出需求定义卡、缺口清单、最少追问和建议默认值，而不是直接进入代码实现。
 
 这个闸门的目标不是把所有任务都变成 PRD，而是防止 Coding Agent 根据模糊提示词实现错误方向，减少返工和失控修改。
 
 ## 兼容性
 
-`cdf` 遵循 Codex 和 Claude Code 使用的 Agent Skills `SKILL.md` 格式：
+`cdp` 遵循 Codex 和 Claude Code 使用的 Agent Skills `SKILL.md` 格式：
 
-- Skill 目录：`skills/cdf/`
-- Skill 入口：`skills/cdf/SKILL.md`
-- Skill 名称：`cdf`
-- Skill 元数据：`skills/cdf/skill.json`
-- Codex UI 元数据：`skills/cdf/agents/openai.yaml`
+- Skill 目录：`skills/cdp/`
+- Skill 入口：`skills/cdp/SKILL.md`
+- Skill 名称：`cdp`
+- Skill 元数据：`skills/cdp/skill.json`
+- Codex UI 元数据：`skills/cdp/agents/openai.yaml`
 
 目录名和 `SKILL.md` frontmatter 中的 `name` 保持一致。这能兼容 Agent Skills 规范，也能让短名称调用更稳定。
 
 ## 内置参考
 
-`cdf` 内置了 `references/karpathy-guidelines.md`，作为 MIT 协议的编码 Agent 行为参考：先思考再编码、保持简单、做外科手术式修改，并定义可验证的成功标准。
+`cdp` 内置了 `references/karpathy-guidelines.md`，作为 MIT 协议的编码 Agent 行为参考：先思考再编码、保持简单、做外科手术式修改，并定义可验证的成功标准。
 
 对于 Level M、Level L 和 Level XL 任务，Agent 必须先读取这份参考，再输出计划、设计或开始实现。对于 Level S 任务，读取这份参考是可选的，以保持简单改动足够轻量。只有当目标搜索发现客观信号时才读取，例如目标被多个模块共享、引用超过五处、需要改多个文件/模块、涉及共享设计 token 或基础组件、当前任务已有失败尝试，或路径与高风险区域重叠。
 
-这份参考已经随 `cdf` 打包，用户不需要额外安装 `karpathy-guidelines`。
+这份参考已经随 `cdp` 打包，用户不需要额外安装 `karpathy-guidelines`。
 
-如果安装后的环境中缺少 `references/karpathy-guidelines.md`，Agent 不应阻塞流程，而应继续以 cdf 规则作为事实来源，并说明这份辅助参考不可用。
+如果安装后的环境中缺少 `references/karpathy-guidelines.md`，Agent 不应阻塞流程，而应继续以 cdp 规则作为事实来源，并说明这份辅助参考不可用。
 
 ## 目标存在性校验
 
@@ -234,11 +234,11 @@ Agent 行为：
 每个 Level L 和 Level XL 审批请求都提供两个明确选项：
 
 - `Approve and implement` / `同意并修改`：授权修改当前展示范围或当前阶段内的代码。
-- `Approve and save as local task` / `同意并保存为本地 task`：批准当前范围、延期实施，并把 `cdf-cdtask/v1` 交接包交给 `cdtask`。
+- `Approve and save as local task` / `同意并保存为本地 task`：批准当前范围、延期实施，并把 `cdp-cdtask/v1` 交接包交给 `cdtask`。
 
 延期保存选项不授权当前回合修改实现文件。CDTask 会校验交接包、生成按依赖排序的任务拆分、执行最终审查，并以 `status: ready_for_resume` 保存。用户指定路径时优先使用；否则默认保存到当前工作区的 `_cdtask/YYYY-MM-DD-<slug>.md`。
 
-CDF 会在生成交接包或创建本地文件之前检查 CDTask 是否可用。如果 CDTask 不可用，CDF 不创建 `_cdtask`、不保存降级文档，也不自动安装，只输出：
+CDP 会在生成交接包或创建本地文件之前检查 CDTask 是否可用。如果 CDTask 不可用，CDP 不创建 `_cdtask`、不保存降级文档，也不自动安装，只输出：
 
 ```bash
 npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
@@ -248,8 +248,8 @@ npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a cl
 
 保存后的 task 支持两条路径：
 
-- Path A：用户明确请求 `Continue local task: <path>` 或 `继续执行本地 task：<path>`。CDF 会重新检查目标、代码证据、风险、分支和 commit；没有实质变化时，该请求授权执行已保存范围。
-- Path B：用户明确把 task 交给外部 coding agent。该 Agent 只能实现 Task Breakdown，并遵守 Scope Guard 和 Handoff Rules。CDF 不会自动把外部执行视为完成；需要 CDF 管理收尾时，应把结果带回 CDF 验证或关闭。
+- Path A：用户明确请求 `Continue local task: <path>` 或 `继续执行本地 task：<path>`。CDP 会重新检查目标、代码证据、风险、分支和 commit；没有实质变化时，该请求授权执行已保存范围。
+- Path B：用户明确把 task 交给外部 coding agent。该 Agent 只能实现 Task Breakdown，并遵守 Scope Guard 和 Handoff Rules。CDP 不会自动把外部执行视为完成；需要 CDP 管理收尾时，应把结果带回 CDP 验证或关闭。
 
 文档处于 ready 状态本身不代表获得实施授权。如果存在实质漂移，则必须重新输出审批请求。
 
@@ -264,17 +264,17 @@ npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a cl
 安装到 Codex：
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -g -y
 ```
 
 安装到 Claude Code：
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdf -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a claude-code -g -y
 ```
 
 同时安装到 Codex 和 Claude Code：
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
 ```

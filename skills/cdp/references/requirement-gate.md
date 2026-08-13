@@ -18,7 +18,7 @@
 
 ## Purpose
 
-Use this file when a request is vague, underspecified, or high-risk. The goal is to reach executable clarity before the CDF workflow chooses a risk level.
+Use this file when a request is vague, underspecified, or high-risk. The goal is to reach executable clarity before the CDP workflow chooses a risk level.
 
 Requirement Gate is an entrance check, not a replacement for Target Existence Check, Requirement Understanding, Requirement Decomposition, Risk Classification, Evidence-Based Thinking, Approval, Verification, or Traceability.
 
@@ -147,7 +147,7 @@ If you want to move quickly, I suggest these defaults:
 - UI: Follow the existing design system ...
 - Acceptance: Treat ... as done when ...
 
-If you reply "use the defaults", I will treat these as explicit assumptions and continue into CDF risk classification.
+If you reply "use the defaults", I will treat these as explicit assumptions and continue into CDP risk classification.
 ```
 
 Defaults are not silent assumptions. State them. Do not use defaults to bypass high-risk confirmation.
@@ -156,7 +156,7 @@ Defaults are not silent assumptions. State them. Do not use defaults to bypass h
 
 After clarification:
 
-- Delivery: if the task is an implementation request, continue into the CDF workflow. If the user only wants a deliverable such as a spec or brief, stop after producing that artifact.
+- Delivery: if the task is an implementation request, continue into the CDP workflow. If the user only wants a deliverable such as a spec or brief, stop after producing that artifact.
 - Diagnosis: return a diagnosis summary, likely causes, evidence gaps, and recommended next checks. Only continue into implementation if the user turns it into a fix request.
 - Decision: return a recommendation or decision memo. Only continue into implementation if the chosen option becomes an implementation task.
 - Research: return a research brief or synthesis. Only continue into implementation if the user converts the result into a build request.
@@ -194,7 +194,7 @@ Use the user's language. If the user writes in Chinese, respond in Chinese. If t
 English template:
 
 ```md
-I need to clarify the requirement before choosing a CDF workflow level.
+I need to clarify the requirement before choosing a CDP workflow level.
 
 ## Ask Type
 - Delivery / Diagnosis / Decision / Research
@@ -231,7 +231,7 @@ I need to clarify the requirement before choosing a CDF workflow level.
 Chinese template:
 
 ```md
-在进入 CDF 风险分级和实现前，我需要先把需求澄清一下。
+在进入 CDP 风险分级和实现前，我需要先把需求澄清一下。
 
 ## 需求类型
 - 交付型 / 诊断型 / 决策型 / 研究型
@@ -267,7 +267,7 @@ Chinese template:
 
 ## Requirement Spec Output
 
-When the user explicitly asks to organize requirements, output a requirement document, generate a spec or PRD, create development instructions for Codex, or turn an idea into a task, cdf may output a structured Requirement Spec.
+When the user explicitly asks to organize requirements, output a requirement document, generate a spec or PRD, create development instructions for Codex, or turn an idea into a task, cdp may output a structured Requirement Spec.
 
 Template:
 
@@ -460,6 +460,6 @@ User:
 按你的默认方案来。
 
 Agent:
-Treat suggested defaults as explicit assumptions, restate them, then continue into the CDF workflow.
+Treat suggested defaults as explicit assumptions, restate them, then continue into the CDP workflow.
 ```
 
