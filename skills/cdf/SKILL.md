@@ -69,7 +69,8 @@ CDF expects CDP to return:
 - risks and material assumptions;
 - acceptance criteria;
 - an approved `Scope-Lock-Version: cdp-scope/v1` block;
-- an Approval Record identifying full, conditional, or partial approval and any unapproved items.
+- an Approval Record identifying full, conditional, or partial approval and any unapproved items;
+- the applicable Locked Scope Summary or Partial Approval Result shown to the user.
 
 Do not rewrite CDP's technical design as if CDF produced it. If the output is incomplete or the requirement remains materially ambiguous, keep the work in planning and ask CDP to resolve the gap before tasking.
 
@@ -94,6 +95,8 @@ Preserve the approved plan's scope, constraints, risks, and acceptance criteria 
 For the existing internal `cdf-cdtask/v1` handoff, copy the complete approved `cdp-scope/v1` block verbatim. Do not paraphrase, reorder, merge, omit, weaken, or expand `in_scope`, `out_of_scope`, `non_goals`, `assumptions`, `stop_conditions`, `will_change`, `will_not_change`, or `acceptance_criteria`.
 
 Do not invoke CDTask when the Scope Lock is missing, internally conflicting, or inconsistent with the approved plan. Any scope extension must return to CDP for replanning and renewed human approval.
+
+For partial approval, preserve CDP's Partial Approval Result and pass only its canonical approved-subset Scope Lock to CDTask. `Approved Items` must match `in_scope` verbatim, every `Unapproved Items` entry must remain explicitly excluded, and no task may be prepared for the unapproved remainder.
 
 These versioned values are internal Skill handoff formats for CDF v0.1, not a public runtime protocol.
 

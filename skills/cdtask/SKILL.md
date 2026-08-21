@@ -315,7 +315,7 @@ When this contract is present:
 
 In CDF managed mode, do not introduce new implementation-affecting assumptions. If missing information would materially affect behavior, scope, architecture, API or data contracts, shared contracts, acceptance criteria, verification strategy, risk, product behavior, or implementation direction, return `Tasking Status: BLOCKED` to CDF. Do not guess, choose a default, or silently normalize the gap. CDF may return the flow to CDP for replanning or renewed approval.
 
-CDTask may derive task-definition details only when they are fully implied by the approved Plan and do not introduce a new implementation decision. Allowed derivations include assigning stable task IDs, making already-implied dependency edges explicit, normalizing headings, converting approved scope into Scope Lock, deriving conservative Write Scope from confirmed evidence, listing Shared Contracts already present in the approved Plan or evidence, and formatting approved Acceptance Criteria as task-level checklists.
+The canonical Scope Lock in an approved input is never derived or reconstructed: copy it verbatim into every required artifact location. CDTask may derive only task-definition details that are fully implied by the approved Plan and introduce no new implementation decision. Allowed derivations include assigning stable task IDs, making already-implied dependency edges explicit, normalizing non-canonical headings, creating readable projections from the copied Scope Lock, deriving conservative task Write Scope from `will_change` and confirmed evidence, listing Shared Contracts already present in the approved Plan or evidence, and formatting approved Acceptance Criteria as task-level checklists.
 
 ## Scope Lock Consistency Validation
 
@@ -328,7 +328,8 @@ Run this validation for every `cdf-cdtask/v1` or `cdp-cdtask/v1` input before ta
 3. Reject missing fields, placeholders, scalar replacements, or ambiguous catchalls such as `etc.`, `as needed`, or `unrelated changes` in restrictive fields.
 4. Treat the received Scope Lock as immutable approved data. Copy it into outputs verbatim; do not paraphrase, merge, reorder, omit, weaken, or broaden list items.
 5. Validate every readable projection, including `Change Scope`, `Scope Lock`, plan prose, phase boundaries, and high-level Acceptance Criteria, against the canonical block. A projection may add task-definition detail only when fully implied; it may not change meaning.
-6. Validate `Approval Type: full | conditional | partial`. Conditional approval must have its conditions represented in the Scope Lock. Partial approval must identify the exact approved subset and unapproved items; no task may be created for an unapproved item.
+6. Validate `Approval Type: full | conditional | partial`. Conditional approval must have its conditions represented in the Scope Lock.
+7. For partial approval, require `Approved Items` to match the approved-subset Scope Lock `in_scope` items one-for-one and verbatim. Require every `Unapproved Items` entry to remain verbatim and explicitly excluded; no task may be created for it.
 
 ### Task-to-Scope Validation
 
@@ -340,6 +341,7 @@ For every proposed task, verify:
 - its Implementation Notes do not turn `assumptions` into confirmed facts or new decisions;
 - its stop/escalation behavior preserves every applicable `stop_conditions` item;
 - its task-level acceptance criteria refine, and never replace or weaken, the high-level `acceptance_criteria`.
+- for partial approval, none of its Goal, Scope, Write Scope, Shared Contracts, Implementation Notes, or Acceptance Criteria maps to an `Unapproved Items` entry.
 
 Do not allow `non_goals` to be summarized as generic prose. Preserve each item as an explicit prohibition in Scope Guard and `Must Not Change` checks.
 
@@ -382,7 +384,7 @@ Handoff-Type: deferred-local-task
 Title: ...
 Workspace: ...
 Requested-Task-Path: ...
-Risk-Level: Level L / Level XL
+Risk-Level: <Level S | Level M | Level L | Level XL>
 Approval-State: scope-approved-execution-deferred
 Source-Branch: ...
 Source-Commit: ...
@@ -420,7 +422,7 @@ It must also contain these sections with the exact headings:
 16. `Handoff Execution Paths`
 17. `Resume Rules`
 
-For Level XL, `Proposed Design`, `Data Model / API / State Flow`, and `Approved Phase Boundary` must contain the approved design content. For Level L, these headings remain present with `Not applicable for Level L.` so the interface stays structurally stable.
+For Level XL, `Proposed Design`, `Data Model / API / State Flow`, and `Approved Phase Boundary` must contain the approved design content. For Level S, Level M, and Level L, these headings remain present with `Not applicable for <risk level>.` when they have no approved content, so the interface stays structurally stable without inventing architecture.
 
 ## CDP Package Validation
 
@@ -616,7 +618,7 @@ Always include:
 8. If the requirement says not to modify sorting, do not include sorting implementation as a current task.
 9. If the requirement says sorting should only be documented for future work, include it only as documentation or future-note content.
 10. If the requirement says only backend write logic is in scope, do not include frontend, shared schema, OpenAPI, or display tasks.
-11. For `cdf-cdtask/v1`, derive Scope Lock from the approved plan without expanding scope, inventing architecture, silently removing constraints, or converting future notes into current tasks.
+11. For `cdf-cdtask/v1`, copy the received canonical Scope Lock verbatim. Derive only readable projections and task-definition details from it; never reconstruct it from plan prose.
 12. If managed decomposition reveals a contradiction in the approved plan, return `BLOCKED` to CDF; do not independently replan.
 13. For either approved contract, preserve every canonical Scope Lock list item verbatim in the stored or returned artifact.
 14. If CDTask itself introduces an out-of-scope task or drops a prohibition, use `NOT_READY`, repair the task definition, and rerun validation.

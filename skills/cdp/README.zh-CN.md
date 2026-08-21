@@ -42,7 +42,7 @@ CDP 在选择工作流等级前，会先判断需求是否达到可执行清晰�
 
 `cdp` 内置了 `references/karpathy-guidelines.md`，作为 MIT 协议的编码 Agent 行为参考：先思考再编码、保持简单、做外科手术式修改，并定义可验证的成功标准。
 
-对于 Level M、Level L 和 Level XL 任务，Agent 必须先读取这份参考，再输出计划、设计或开始实现。对于 Level S 任务，读取这份参考是可选的，以保持简单改动足够轻量；仅在当前任务已有失败尝试，或通过反向检查后仍需要额外最小改动约束时读取。共享代码、多模块影响、设计 token/基础组件、生成代码、公共配置或高风险路径重叠都必须触发重新分级，而不是继续停留在 Level S。
+对于 Level M、Level L 和 Level XL 任务，Agent 必须先读取这份参考，再输出计划、设计或开始实现。对于 Level S 任务，读取这份参考是可选的，以保持简单改动足够轻量；仅在当前任务已有失败尝试，或通过 Level S Reverse Check 后仍需要额外最小改动约束时读取。共享代码、多模块影响、设计 token/基础组件、生成代码、公共配置或高风险路径重叠都必须触发重新分级，而不是继续停留在 Level S。
 
 这份参考已经随 `cdp` 打包，用户不需要额外安装 `karpathy-guidelines`。
 
@@ -99,12 +99,65 @@ Agent 只能在需求闸门通过、需求理解和需求拆解之后，对任�
 
 风险等级采用可检查规则：
 
-- Level S 必须同时满足：单一非共享目标、仅本地静态展示、不改变行为/数据/契约/配置、证据充分且一致，并通过完整低风险反向检查。
-- Level M 必须同时满足：单一且有边界的可逆功能流、输入/输出/失败行为明确、不涉及共享或全局表面、不含高风险信号、证据充分且一致，并通过同一反向检查。
+- Level S 必须同时满足：单一非共享目标、仅本地静态展示、不改变行为/数据/契约/配置、证据充分且一致，并完整通过 Level S Reverse Check。
+- Level M 必须同时满足：单一且有边界的可逆功能流、输入/输出/失败行为明确、不涉及共享或全局表面、不含高风险信号、证据充分且一致，并完整通过 Level M Reverse Check。
 - Level L 只要出现任一共享组件/主题/全局状态、条件渲染/权限、缓存、埋点、i18n、配置、任务/事件、持久化数据写入、计费、认证授权或生产配置等信号就成立。
 - Level XL 适用于新模块/服务、架构或重大数据流重设计、协调迁移，或需要审批控制的分阶段交付。
 
-在最终判定 S/M 前，Agent 必须重新扫描全部强制升级信号。任一信号命中至少升级到 Level L；任一信号为未知时，不得最终判为 S/M。
+在最终判定 S/M 前，Agent 必须按顺序完整运行下面两类 Checklist。这些是实际工作门禁，不是仅供参考的清单；最终分级时每一行都必须填写状态和证据。
+
+### 强制升级 Checklist
+
+每一行使用 `CLEAR`、`HIT` 或 `UNKNOWN`。
+
+| ID | 检查项 | 结果 | 证据 |
+|---|---|---|---|
+| ESC-01 | 共享组件/基础组件、主题/token/共享样式或全局状态 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-02 | 条件渲染、功能开关、权益、权限或用户特定行为 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-03 | 持久化数据写入/删除、schema、迁移、回填或用户数据 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-04 | 计费/支付/订阅/定价、认证或授权 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-05 | 报表、分析、遥测、埋点、收入/成本/ROI 或业务指标 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-06 | 缓存、定时/同步任务、队列/重试/幂等、事件/webhook/consumer | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-07 | i18n、无障碍、合规、安全、隐私或可观测性敏感行为 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-08 | 应用、部署、环境或生产配置 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-09 | 第三方 API、外部契约、CDN/静态资源交付或发布打包 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-10 | 架构/新模块/服务、重大重设计/重构、协调迁移或分阶段发布 | `CLEAR / HIT / UNKNOWN` | 已检查来源 |
+| ESC-11 | 证据不足，无法排除更高风险 | `CLEAR / HIT / UNKNOWN` | 明确缺口 |
+| ESC-12 | 关于范围、行为、归属、风险或影响的证据发生实质冲突 | `CLEAR / HIT / UNKNOWN` | 冲突来源 |
+
+任一 `HIT` 至少升级到 Level L；ESC-10 涉及架构、新模块/服务、重大重设计、协调迁移或分阶段交付时使用 Level XL。任一 `UNKNOWN` 都禁止最终判定 S/M，并进入 Evidence Gap Handling。证据实质冲突时进入 Evidence Conflict Handling；冲突影响计划含义时保持 `BLOCKED`。
+
+### Level S Reverse Check
+
+仅当全部升级项都是 `CLEAR` 时运行。每一行都为 `PASS` 才能使用 Level S。
+
+| ID | Level S 必须满足 | 结果 | 证据 |
+|---|---|---|---|
+| S-01 | 只有一个已定位且非共享的目标 | `PASS / FAIL / UNKNOWN` | 目标/使用证据 |
+| S-02 | 仅涉及文案、间距、颜色、图标尺寸或静态展示 | `PASS / FAIL / UNKNOWN` | 行为证据 |
+| S-03 | 不改变行为/状态/API/数据/契约/配置/生成产物 | `PASS / FAIL / UNKNOWN` | 已检查来源 |
+| S-04 | 验收与验证可在该目标局部完成 | `PASS / FAIL / UNKNOWN` | 验证证据 |
+| S-05 | 范围明确、可逆，且不需要相邻清理或重构 | `PASS / FAIL / UNKNOWN` | 范围证据 |
+| S-06 | 证据充分且一致，并且升级清单全部 `CLEAR` | `PASS / FAIL / UNKNOWN` | 证据摘要 |
+
+任一 `FAIL` 都使 Level S 不成立；如果没有命中升级信号，继续评估 Level M，不要自动跳到 Level L。任一 `UNKNOWN` 进入 Evidence Gap Handling。
+
+### Level M Reverse Check
+
+仅当全部升级项都是 `CLEAR` 时运行。每一行都为 `PASS` 才能使用 Level M。
+
+| ID | Level M 必须满足 | 结果 | 证据 |
+|---|---|---|---|
+| M-01 | 只有一个边界清晰的功能或用户流 | `PASS / FAIL / UNKNOWN` | 流程边界 |
+| M-02 | 模块、输入、输出、状态变化和失败行为均已确认 | `PASS / FAIL / UNKNOWN` | 已检查来源 |
+| M-03 | 不涉及共享/全局表面或公共/共享契约 | `PASS / FAIL / UNKNOWN` | 使用/契约证据 |
+| M-04 | 不需要迁移、发布协调、契约重设计、新模块/服务或架构决策 | `PASS / FAIL / UNKNOWN` | 依赖/设计证据 |
+| M-05 | 改动可逆且验证策略明确 | `PASS / FAIL / UNKNOWN` | 回退/测试证据 |
+| M-06 | 证据充分且一致，并且升级清单全部 `CLEAR` | `PASS / FAIL / UNKNOWN` | 证据摘要 |
+
+任一 `FAIL` 都使 Level M 不成立；应采用证据支持的最高 L/XL 规则，或在无法确定时继续澄清。任一 `UNKNOWN` 进入 Evidence Gap Handling。
+
+用户可见计划包含精简的 `Risk Gate Result`：升级清单结果、反向检查结果、证据引用和最终风险等级。这样可以证明门禁已实际运行，同时不暴露私有思维链，也不让小改动计划变得冗长。
 
 初始风险分级应和需求理解、需求拆解一起对用户可见。
 
@@ -182,14 +235,17 @@ Requirement Decomposition:
 Evidence:
 - ...
 
-Risk:
-- ...
+Risk Gate Result:
+- Escalation Checklist: All rows: CLEAR
+- Reverse Check: Level M — PASS
+- Evidence: ...
+- Final Risk Level: Level M
 
 Plan:
 1. ...
 2. ...
 
-Recommendation: Execute Now because this is scoped and passed the S/M reverse check. Awaiting explicit user choice.
+Recommendation: Execute Now because this is scoped and passed the Level M Reverse Check. Awaiting explicit user choice.
 ```
 
 ### Level L：需要确认
@@ -246,11 +302,43 @@ Agent 行为：
 
 对于 Level L 和 Level XL，有效批准必须同时明确“动作”和获批的 Scope Lock、阶段、任务或子集。`Approve and implement`、`批准并实施`、`同意按此范围执行` 等属于明确批准；单独的 `ok`、`继续`、`可以`、`嗯`、`Proceed` 或 `go ahead` 无效，Agent 必须使用简短的上下文追问模板再次确认。
 
-CDP 支持完整批准、带条件批准和部分批准。条件必须写入 Scope Lock；部分批准必须生成仅包含获批子集的 Scope Lock，并把其余内容明确标记为未批准。任何扩大范围的条件都必须重新规划并再次审批。
+CDP 支持完整批准、带条件批准和部分批准。条件必须写入 Scope Lock；部分批准必须生成正向字段只包含获批工作的子集 Scope Lock，并把其余内容明确标记为未批准。任何扩大范围的条件都必须重新规划并再次审批。
 
-有效批准后，CDP 必须回显 Locked Scope Summary，至少包含 `in_scope`、`will_not_change`、`non_goals`、批准类型和授权动作，并原样复制已批准内容。
+完整批准或带条件批准生效后，CDP 必须回显 Locked Scope Summary，至少包含 `in_scope`、`will_not_change`、`non_goals`、批准类型和授权动作，并原样复制已批准内容。
 
-每个 Level L 和 Level XL 审批请求都提供两个明确选项：
+部分批准使用独立结果，让用户一眼看清边界：
+
+````md
+## Partial Approval Result
+
+Approval Type: partial
+Authorized Action: <Execute Now | Save as CDTask | Return Approved Plan Package to CDF>
+
+### Approved Scope
+- <从获批子集 Scope Lock 的 `in_scope` 原样复制>
+
+### Unapproved / Remaining
+Status: NOT APPROVED — MUST NOT BE IMPLEMENTED / 未批准，不得实施
+- <从 Approval Record 的剩余项原样复制>
+
+### Approved-Subset Scope Lock
+
+```yaml
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
+```
+````
+
+已批准范围、剩余项和完整子集 Scope Lock 都必须原样复制。如果无法在不新增假设或改写语义的前提下隔离子集，CDP 必须追问或重新规划，不得交接。
+
+每个 standalone Development Plan 都提供两个明确选项；Level L 和 Level XL 只有在高风险范围审批门禁通过后才能使用：
 
 - `Execute Now`（`Approve and implement` / `同意并修改`）：授权修改当前展示的 Scope Lock 或当前获批阶段内的代码。
 - `Save as CDTask`（`Approve and save as local task` / `同意并保存为本地 task`）：批准 Scope Lock、延期实施，并把 `cdp-cdtask/v1` 交接包交给 `cdtask`。
@@ -277,6 +365,16 @@ npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a cl
 验证应匹配变更风险区域。例如 schema 改动需要 schema 或 migration 验证，账单/报表改动需要计算路径检查，认证改动需要允许和拒绝路径检查。验证失败时，只有仍在已批准范围内的修复可以继续；扩大范围必须重新请求确认。
 
 对于 Level L 和 Level XL，最终回复应包含结构化的 Traceability 字段。在 git 工作区中，Agent 应主动查询当前分支和最新 commit；如果溯源信息不可用，应说明原因。
+
+## 边界案例
+
+完整双语对话见 [边界案例](references/boundary-cases.md)，其中覆盖三个控制边界：
+
+1. 看似只改一行颜色，但实际影响共享 Button、全局主题 token 和条件状态；ESC-01、ESC-02 命中，因此最终必须从 S 升到 L。
+2. Level L 计划之后用户只回复 `ok，继续`，既没有指定动作，也没有明确范围；CDP 必须再次显示简短的明确授权选项，不实施也不准备任务交接。
+3. 权限证据冲突时采用临时 Level L 并保持 `BLOCKED`；用户移除冲突范围后，CDP 必须先展示重新分级的新计划和子集 Scope Lock。只有后续明确批准才能授权展示最终部分批准结果，并把可独立成立的文案子集交给 CDTask。
+
+这些是决策模式，不是产品默认值。如果看似可分离的子集仍依赖未解决证据，继续保持 `BLOCKED`。
 
 ## 安装
 

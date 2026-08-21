@@ -163,7 +163,7 @@ After clarification:
 
 ## High-Risk Areas
 
-Use this list as the single source of truth for high-risk checks:
+Use this taxonomy to surface high-risk questions during Requirement Gate. The Mandatory Escalation Checklist in `../SKILL.md` is its operational classification gate: every row must receive a status and evidence before a final Level S or Level M decision. Keep the two lists aligned; if either identifies a broader risk, use the higher-risk result.
 
 - Shared components, shared UI primitives, theme systems, design tokens, or global state.
 - Conditional rendering, feature gates, entitlement checks, or permission-dependent behavior.
