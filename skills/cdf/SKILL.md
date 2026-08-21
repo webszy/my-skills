@@ -67,7 +67,9 @@ CDF expects CDP to return:
 - technical analysis;
 - implementation plan;
 - risks and material assumptions;
-- acceptance criteria.
+- acceptance criteria;
+- an approved `Scope-Lock-Version: cdp-scope/v1` block;
+- an Approval Record identifying full, conditional, or partial approval and any unapproved items.
 
 Do not rewrite CDP's technical design as if CDF produced it. If the output is incomplete or the requirement remains materially ambiguous, keep the work in planning and ask CDP to resolve the gap before tasking.
 
@@ -89,6 +91,12 @@ Executable Task Definition
 
 Preserve the approved plan's scope, constraints, risks, and acceptance criteria in the handoff. Let CDTask determine the task structure and decomposition details. If task creation exposes a missing implementation decision or a conflict with the approved plan, return to CDP or the user as appropriate; do not invent the decision.
 
+For the existing internal `cdf-cdtask/v1` handoff, copy the complete approved `cdp-scope/v1` block verbatim. Do not paraphrase, reorder, merge, omit, weaken, or expand `in_scope`, `out_of_scope`, `non_goals`, `assumptions`, `stop_conditions`, `will_change`, `will_not_change`, or `acceptance_criteria`.
+
+Do not invoke CDTask when the Scope Lock is missing, internally conflicting, or inconsistent with the approved plan. Any scope extension must return to CDP for replanning and renewed human approval.
+
+These versioned values are internal Skill handoff formats for CDF v0.1, not a public runtime protocol.
+
 ## Human Gate
 
 ### Plan Approval
@@ -97,7 +105,7 @@ Before invoking CDTask, show the user a concise, decision-ready plan containing 
 
 Wait for explicit approval. Approval confirms the direction and scope; it does not authorize CDF to implement or execute the tasks.
 
-Do not treat silence, partial feedback, or approval of only one section as approval of the complete plan.
+Do not treat silence or acknowledgements such as `ok`, `继续`, `可以`, or `嗯` as approval. Conditional or partial approval applies only to the normalized approved Scope Lock returned by CDP; unapproved items remain excluded.
 
 ## Rules
 
@@ -109,7 +117,7 @@ Do not treat silence, partial feedback, or approval of only one section as appro
 - Do not expand the user's requested or approved scope.
 - Do not replace CDP's planning responsibilities.
 - Do not replace CDTask's task-definition responsibilities.
-- Do not claim runtime, execution, verification, review, event, schema, or CLI capabilities.
+- Do not claim runtime, execution, verification, review, event-system, public schema-protocol, or CLI capabilities.
 - End the v0.1 flow after producing and handing off the executable task definition.
 
 ## Future Extensions
@@ -124,6 +132,6 @@ These extensions are not CDF v0.1 capabilities. Do not invoke, simulate, or depe
 ### Long Term
 
 - CDF Runtime;
-- Protocol Schema for structured component contracts;
+- public or runtime Protocol Schema;
 - event-driven coordination;
 - CLI support.

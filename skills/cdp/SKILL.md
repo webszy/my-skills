@@ -120,11 +120,48 @@ This decision tree and Classification Rules are the same source of truth. If the
 Choose the first matching branch:
 
 1. If the task requires a new service, new module, major refactor, major data-flow redesign, architecture design, or phased rollout, classify as Level XL.
-2. Else if it touches any High-Risk Areas item in `references/requirement-gate.md`, classify as Level L unless the item itself requires Level XL.
-3. Else if a High-Risk Areas item is mentioned only because of local display/style/copy, and evidence confirms no runtime, workflow, compliance, or business impact, classify as Level S. If evidence is insufficient or ambiguous, classify as Level L.
-4. Else if it changes a scoped interaction, form behavior, validation, local state, small API call, loading state, empty state, filter, or one page flow, classify as Level M.
-5. Else if it is copy, style, spacing, icon size, static UI, or a single-component visual tweak and all Level S conditions are true, classify as Level S.
-6. If evidence points to multiple branches, use the highest risk branch. If evidence is insufficient for final classification, continue inspecting or ask the user; do not downgrade by assumption.
+2. Else if any Mandatory Escalation Signal or High-Risk Areas item is present, classify as at least Level L.
+3. Else if every Level S condition and the S/M Reverse Check pass, classify as Level S.
+4. Else if every Level M condition and the S/M Reverse Check pass, classify as Level M.
+5. Otherwise do not finalize S or M. Follow Evidence Gap and Evidence Conflict Handling, using the highest risk supported by available evidence.
+
+## Mandatory Escalation Signals
+
+Upgrade an initial Level S or Level M classification to at least Level L when any signal below is present. Upgrade to Level XL instead when the work also requires new architecture, a new module or service, a cross-system redesign, or phased delivery.
+
+- shared components, shared UI primitives, theme systems, design tokens, or global state;
+- conditional rendering, feature gating, entitlement checks, or permission-related behavior;
+- caches or cache invalidation;
+- analytics, telemetry, tracking, or business metrics;
+- localization or i18n behavior;
+- application, deployment, environment, or production configuration;
+- scheduled jobs, queues, retries, background work, events, webhooks, or message consumers;
+- data creation, mutation, deletion, migration, or backfill;
+- billing, payments, subscriptions, IAP, pricing, authentication, or authorization;
+- evidence that is insufficient to rule out a higher-risk path;
+- evidence sources that materially conflict about scope, behavior, ownership, or impact.
+
+Do not downgrade merely because the visible UI change is small or the file count is low.
+
+For insufficient or conflicting evidence, Level L is a provisional control floor, not permission to finalize the plan. Follow the dedicated evidence path and remain `BLOCKED` when the unresolved item changes plan meaning.
+
+Why: these signals commonly hide cross-cutting behavior or blast radius behind a locally visible change.
+
+## S/M Reverse Check
+
+Before finalizing Level S or Level M, answer every item below from inspected evidence:
+
+- [ ] The target is not shared across components, routes, modules, themes, or global state.
+- [ ] The change does not alter conditional rendering, permissions, entitlements, feature gates, or user-specific behavior.
+- [ ] The change does not touch cache, tracking, analytics, i18n, configuration, jobs, queues, retries, events, or webhooks.
+- [ ] The change does not read, create, mutate, delete, migrate, or backfill persistent data.
+- [ ] The change does not affect billing, authentication, authorization, security, privacy, compliance, or production configuration.
+- [ ] Relevant evidence is sufficient and internally consistent.
+- [ ] The proposed scope is bounded, reversible, and does not require architecture, a new module/service, or phased delivery.
+
+If any answer is `No`, upgrade to at least Level L. If any answer is `Unknown`, do not finalize S/M; follow Evidence Gap Handling. If inspected sources disagree, follow Evidence Conflict Handling.
+
+Why: S/M is permitted only after the agent actively disproves hidden high-risk impact.
 
 ## Bundled References
 
@@ -134,12 +171,10 @@ For Level M, Level L, and Level XL tasks, read `references/karpathy-guidelines.m
 
 For Level S tasks, do not read this reference by default. After the target check/search, read it for Level S only if at least one objective signal is true:
 
-- The target file, component, symbol, style token, or copy key is shared by two or more modules, routes, packages, or features.
-- The target symbol or copy key has more than five references or call sites.
-- The change touches more than one file, package, or module.
-- The change affects shared UI primitives, design tokens, shared styles, generated code, or common configuration.
 - A previous attempt in the current task failed, produced the wrong target, or required rework.
-- The located target path or symbol name overlaps a Level L or Level XL risk area; in that case, reclassify before continuing.
+- The agent needs the additional minimal-change guardrails after the S/M Reverse Check has passed.
+
+Shared targets, multiple affected modules, design tokens, shared styles, generated code, common configuration, or overlap with a Level L/XL area are not reasons to remain Level S and read more guidance. They are reclassification signals; rerun the decision tree and upgrade before continuing.
 
 This reference is bundled with cdp, so it does not require the user to install `karpathy-guidelines` separately. Treat it as supporting guidance; cdp remains responsible for risk classification, approval gates, and its context-allowed flow.
 
@@ -202,6 +237,30 @@ If evidence is insufficient, continue inspecting or pause and ask the user. Do n
 
 For Level S tasks, this thinking may stay brief and usually does not need to be shown as a plan, but the agent must still inspect enough code or search results to locate the exact target and avoid inventing targets, style sources, copy locations, or facts.
 
+## Evidence Gap Handling
+
+Use this path when required evidence is missing, unavailable, or too weak to rule out a higher-risk impact:
+
+1. Record exactly what evidence is missing and which classification or scope decision depends on it.
+2. Continue safe read-only inspection when the repository or supplied artifacts can resolve the gap.
+3. If only the user or an external owner can resolve it, ask the smallest targeted question and stop before final classification, approval, implementation, or CDTask handoff.
+4. If the gap leaves a Mandatory Escalation Signal possible, use provisional Level L controls; do not label the work S or M.
+5. In `cdf-managed`, return `Planning Status: BLOCKED` when the missing evidence affects scope, architecture, behavior, risk, acceptance criteria, or approval meaning.
+
+Do not convert an evidence gap into an assumption when being wrong would expand scope or change behavior.
+
+## Evidence Conflict Handling
+
+Use this path when inspected files, contracts, documentation, user statements, or runtime-facing configuration disagree materially:
+
+1. List the conflicting claims and their sources.
+2. Use the highest risk level supported by any credible source; never choose the lower-risk interpretation for convenience.
+3. Ask for an authoritative decision when the conflict changes scope, behavior, ownership, contracts, or acceptance criteria.
+4. Mark the plan `BLOCKED` until the material conflict is resolved. In `cdf-managed`, return the conflict to CDF for CDP replanning or renewed approval.
+5. After resolution, update the evidence record, rerun classification, regenerate the Scope Lock, and invalidate any earlier approval whose meaning changed.
+
+Why: missing evidence may be recoverable by inspection, while conflicting evidence requires an explicit authority decision; treating both as generic uncertainty causes unsafe defaults.
+
 ## Final Risk Classification
 
 After evidence inspection, finalize or upgrade the risk level before planning or editing.
@@ -212,7 +271,54 @@ Examples:
 
 - A visible UI field that depends on payment, IAP, ROI, report, permission, or database logic must upgrade to Level L.
 - A scoped change that requires a new service, new module, major data-flow redesign, or phased rollout must upgrade to Level XL.
-- If evidence is insufficient to decide whether the task is high-risk, keep inspecting or pause and ask the user.
+- If evidence is insufficient to decide whether the task is high-risk, follow Evidence Gap Handling.
+- If evidence materially conflicts, follow Evidence Conflict Handling and do not finalize the plan.
+
+## Scope Lock Contract
+
+Every Development Plan that may be approved, returned to CDF, or handed to CDTask must contain one canonical Scope Lock block using `Scope-Lock-Version: cdp-scope/v1`.
+
+```yaml
+Scope-Lock-Version: cdp-scope/v1
+in_scope:
+  - <approved outcome or capability>
+out_of_scope:
+  - <explicitly excluded adjacent area>
+non_goals:
+  - <specific behavior or deliverable that must not be implemented>
+assumptions:
+  - <approved assumption that does not conceal a blocking evidence gap>
+stop_conditions:
+  - <condition that requires stopping and returning to CDP or the user>
+will_change:
+  - <approved component, contract, behavior, or artifact>
+will_not_change:
+  - <protected component, contract, behavior, or artifact>
+acceptance_criteria:
+  - <high-level observable success condition>
+```
+
+All eight fields are required arrays. Use an explicit empty array `[]` only when the plan intentionally has no item for that field. Never use `TBD`, `etc.`, `as needed`, `unrelated changes`, or similarly unbounded language in `non_goals`, `will_not_change`, or `stop_conditions`.
+
+Field meanings are fixed:
+
+- `in_scope`: approved outcomes and capabilities;
+- `out_of_scope`: adjacent areas excluded from this approval;
+- `non_goals`: specific work that must not be implemented;
+- `assumptions`: disclosed premises accepted for planning; blocking evidence gaps do not belong here;
+- `stop_conditions`: evidence or change conditions that invalidate continuation;
+- `will_change`: concrete affected behavior, components, contracts, or artifacts;
+- `will_not_change`: concrete protected behavior, components, contracts, or artifacts;
+- `acceptance_criteria`: high-level observable conditions for the approved scope.
+
+The Scope Lock is the canonical scope source. Any `Change Scope`, plan prose, phase description, or task handoff section must be consistent with it. When handing off:
+
+1. Copy the complete Scope Lock block verbatim, preserving version, field names, list items, ordering, and meaning.
+2. Do not paraphrase, merge, weaken, omit, or broaden any field.
+3. Do not promote an assumption into approved scope or an implementation fact.
+4. If scope must expand, return to CDP, regenerate the plan and Scope Lock, and obtain approval again before handoff.
+
+Why: one structured, immutable scope source prevents semantic drift between planning, approval, and task decomposition.
 
 ## Development Plan Output
 
@@ -228,9 +334,17 @@ Use this structure whenever CDP presents a plan for approval, next-action select
 - Confirmed evidence: ...
 - Open assumptions: ...
 
-## Scope
-- Will change: ...
-- Will not change: ...
+## Scope Lock
+
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
 
 ## Technical Approach
 - ...
@@ -267,7 +381,7 @@ The levels below are the outcomes of Final Risk Classification. When examples, t
 
 ## Shared Approval Sections
 
-All user-visible outputs before standalone editing or returning an Approved Plan Package to CDF must include Requirement Understanding and Requirement Decomposition. Level L and Level XL approval outputs also need Confirmed Evidence, Open Assumptions, Acceptance Criteria, Risks, and Test Plan / Test Strategy.
+All user-visible outputs before standalone editing or returning an Approved Plan Package to CDF must include Requirement Understanding, Requirement Decomposition, and the canonical Scope Lock. Level L and Level XL approval outputs also need Confirmed Evidence, Open Assumptions, Acceptance Criteria, Risks, and Test Plan / Test Strategy.
 
 In `cdf-managed`, every risk level must reach a human plan/scope approval before returning the Approved Plan Package to CDF. Keep Level S and Level M approval output lightweight, but include enough scope, acceptance criteria, and verification strategy for CDF to continue safely. Level L and Level XL continue to use the full shared approval sections below.
 
@@ -286,6 +400,18 @@ When a Level L or Level XL template says `Expand Shared Approval Sections here`,
 ## Open Assumptions
 - [Facts not directly confirmed from code; items that still need validation.]
 
+## Scope Lock
+
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
+
 ## Acceptance Criteria
 - [Observable conditions that define success while preserving the approved scope.]
 
@@ -296,14 +422,13 @@ When a Level L or Level XL template says `Expand Shared Approval Sections here`,
 - [How to verify the change worked and that regressions did not occur.]
 ```
 
-### Level S: Direct Edit
+### Level S: Lightweight Plan and Decision
 
 Use Level S for simple, low-risk changes:
 
 - Text, copy, labels, placeholders, and empty-state wording.
 - Button colors, spacing, icon sizes, and simple CSS.
 - Static UI adjustments.
-- Simple display or hide logic with no business impact.
 - Single-component visual tweaks.
 
 Rules:
@@ -317,7 +442,7 @@ Rules:
 - Do not introduce new dependencies.
 - In `standalone`, summarize changed files, verification performed, and relevant manual checks after editing. In `cdf-managed`, use the managed final response after approval and return to CDF.
 
-### Level M: Brief Plan Then Edit
+### Level M: Brief Plan and Decision
 
 Use Level M for normal scoped changes:
 
@@ -355,8 +480,17 @@ Risk Level: Level M
 ## Evidence
 - ...
 
-## Scope
-- ...
+## Scope Lock
+
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
 
 ## Technical Approach
 - ...
@@ -406,6 +540,8 @@ I’ll treat this as a Level L change because it affects high-risk logic.
 Expand Shared Approval Sections here.
 
 ## Change Scope
+
+This is a readable projection of the canonical Scope Lock and must not add or weaken scope.
 
 ### Will Change
 - ...
@@ -521,17 +657,38 @@ These rules and the Classification Decision Tree share priority over the example
 
 Classify as Level S only when all are true:
 
-- The change is visual, copy, style, or static UI behavior.
-- It does not touch any High-Risk Areas item in `references/requirement-gate.md`.
-- Any mention of a high-risk area is proven to be purely local display/style/copy with no runtime, workflow, compliance, or business impact.
+- the change is limited to local copy, spacing, color, icon size, or static presentation;
+- exactly one non-shared target is identified from evidence;
+- no conditional behavior, state transition, API call, persistent data, contract, configuration, or generated artifact changes;
+- no Mandatory Escalation Signal or High-Risk Areas item is present;
+- evidence is sufficient and consistent;
+- the S/M Reverse Check passes completely.
 
-Classify as Level M when the change is scoped and reversible, and it does not touch any High-Risk Areas item.
+Classify as Level M only when all are true:
 
-Before finalizing Level M classification, check High-Risk Areas. Any overlap forces Level L, even when the change looks small or touches only one API call.
+- the behavior change is bounded to one feature or user flow;
+- affected modules, inputs, outputs, failure behavior, and verification are known;
+- the change is reversible without migration, rollout coordination, or contract redesign;
+- no shared/global surface and no Mandatory Escalation Signal or High-Risk Areas item is present;
+- evidence is sufficient and consistent;
+- the S/M Reverse Check passes completely.
 
-Classify as Level L when any High-Risk Areas item is affected, even if the file count is small.
+Classify as Level L when any are true and Level XL does not apply:
 
-Classify as Level XL when the task requires architecture, a new module, a new service, a major data-flow change, or phased implementation.
+- any Mandatory Escalation Signal or High-Risk Areas item is affected;
+- the change crosses module boundaries or shared contracts but does not require architectural redesign;
+- persistent data, money, identity, permissions, configuration, background processing, integrations, compliance, or observability-sensitive behavior may change;
+- evidence gaps prevent proving S/M but the work can still be responsibly planned with explicit unknowns and an approval gate.
+
+Classify as Level XL when any are true:
+
+- a new module, service, subsystem, or top-level workflow is required;
+- architecture, public contracts, or major data flow must be designed or redesigned;
+- rollout, migration, or implementation must be split into approval-controlled phases;
+- multiple high-risk systems interact and need a coordinated design;
+- the requested outcome cannot be achieved inside the existing approved boundaries without material redesign.
+
+Level S and M are all-conditions classifications. Level L and XL are any-condition classifications. When rules overlap, use the highest level.
 
 ## Reclassification During Implementation
 
@@ -539,13 +696,17 @@ This section applies only when `execution_owner = self` in `standalone` mode.
 
 If implementation reveals a higher-risk area than originally classified, stop editing immediately.
 
-- Level S or Level M must upgrade to Level L if high-risk logic is discovered.
-- Level L must upgrade to Level XL if architecture, a new service, phased rollout, or major data-flow redesign becomes necessary.
-- Explain what new evidence caused the upgrade.
-- Re-enter the stricter workflow from its required output template using the evidence already gathered; do not merely append a warning to the old plan.
+- Stop implementation or task-persistence preparation at the first newly discovered Mandatory Escalation Signal.
+- Record the new evidence, the previous classification, the required new classification, and the affected Scope Lock fields.
+- Level S or Level M must upgrade to at least Level L when a Mandatory Escalation Signal or high-risk area is discovered.
+- Level L must upgrade to Level XL when architecture, a new module/service, phased rollout, coordinated migration, or major data-flow redesign becomes necessary.
+- Mark the previous Next Action choice and approval stale when the new evidence changes risk, scope, approach, acceptance criteria, or stop conditions.
+- Re-enter the stricter workflow using the evidence already gathered, regenerate the Development Plan and Scope Lock, and obtain the required approval again.
 - If edits were already made before the discovery, disclose them, do not continue editing, and do not revert user or unrelated changes unless the user approves or the revert is required to leave the workspace coherent.
 - Workspace coherence means the agent's own partial edits should not leave obvious syntax errors, type errors, broken imports, failed formatting caused by the edit, or tests/builds that fail solely because the edit is half-applied. If such breakage is discovered, first make the smallest repair or revert necessary to restore the pre-upgrade baseline, report it, and then wait for the stricter approval. Do not use coherence repair to implement additional scope or continue the high-risk change.
 - Wait for the required approval before any further Level L or Level XL edits.
+
+Why: reclassification is a control reset, not a warning appended to an already-authorized plan.
 
 In `cdf-managed`, CDP does not implement. If later managed execution exposes an invalid assumption, scope expansion, architecture change, new high-risk area, or materially different phase, CDF must return the flow to CDP for replanning. Produce a revised plan and repeat the applicable plan approval gate; do not implement a CDF runtime or continue execution inside CDP.
 
@@ -670,6 +831,18 @@ Approval-State: scope-approved-execution-deferred
 Source-Branch: <current branch or Unavailable>
 Source-Commit: <current commit or Unavailable>
 
+## Scope Lock
+
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
+
 ## Requirement Understanding
 - ...
 
@@ -683,6 +856,8 @@ Source-Commit: <current commit or Unavailable>
 - ...
 
 ## Change Scope
+
+- [Derived display only. It must exactly reflect `will_change` and `will_not_change` from the Scope Lock.]
 
 ### Will Change
 - ...
@@ -716,6 +891,10 @@ Source-Commit: <current commit or Unavailable>
 
 ## Approval Record
 - User Choice: Save as CDTask (Approve and save as local task)
+- Approval Type: <full | conditional | partial>
+- Approved Items: <all in_scope items or exact approved subset>
+- Conditions Added To Scope Lock: <none or exact conditions>
+- Unapproved Items: <none or exact remaining items>
 - Scope Approved: Yes
 - Code Changes Authorized In This Turn: No
 
@@ -740,48 +919,99 @@ Apply confirmation according to Execution Context:
 - In `standalone`, every risk level requires an explicit Next Action choice before CDP transitions from planning into implementation or task persistence. Level L and Level XL additionally require approval of the displayed high-risk scope or current phase.
 - In `cdf-managed`, every risk level requires explicit plan/scope approval before returning the Approved Plan Package to CDF, but no approval authorizes CDP to modify implementation files or enter `TASKING`.
 
-Strong standalone implementation approval examples:
+For Level L and Level XL, before valid approval do not implement, create a `cdp-cdtask/v1` package, invoke CDTask, persist a task, or prepare executor-specific task instructions. Planning and the approval display are the only allowed outputs.
 
-- Execute Now
-- Approve and implement
-- 同意并修改
-- Confirm
-- Approved
-- Proceed
-- Go ahead
-- 确认执行
-- 开始修改
-- 按方案改
-- 可以，改吧
-- 没问题，执行
-- OK, proceed
-- 那就这样吧
+## Valid Approval Semantics
 
-Deferred-task approval examples:
+Approval is valid only when the reply unambiguously identifies both:
 
-- Save as CDTask
-- Approve and save as local task
-- 同意并保存为本地 task
-- 同意并保存为本地任务
+1. the authorized action for the current Execution Context; and
+2. the approved plan, Scope Lock, phase, task, or explicitly named subset.
 
-A deferred-task approval approves the displayed scope for storage and later execution, but it is not implementation authorization for the current turn. Do not modify implementation files after receiving it.
+Exact offered action labels are valid when used as a direct reply to the displayed plan:
 
-Managed plan approval examples:
+- standalone implementation: `Execute Now`, `Approve and implement`, `批准并实施`, `同意按此范围执行`, `同意并修改`;
+- standalone persistence: `Save as CDTask`, `Approve and save as CDTask`, `批准此范围并保存为 CDTask`, `同意并保存为本地 task`;
+- CDF-managed return: `Approve plan and continue CDF flow`, `批准计划并继续 CDF 流程`, `批准此 Scope Lock 并返回 CDF`.
 
-- Approve plan and continue CDF flow
-- 批准计划并继续 CDF 流程
-- Approve the plan
-- 批准计划
+A reply is not valid approval when it only acknowledges the message or leaves action/scope ambiguous. Invalid examples include:
 
-A managed approval means `PLAN_APPROVED`; return the Approved Plan Package to CDF and stop before `TASKING`. If a managed reply says `Approve and implement`, do not treat it as CDP implementation authorization.
+- `ok`, `OK`, `好的`, `继续`, `Proceed`, `可以`, `嗯`, `yes`, `go ahead`;
+- `sounds good`, `why not`, `I guess`, `そうですね`, `pourquoi pas`;
+- a question, concern, alternative request, or new requirement without an explicit approval action.
 
-Treat approval as valid only when the user's reply clearly authorizes the action offered for the resolved execution context and does not ask a follow-up question, raise a concern, add a conflicting requirement, or narrow the scope.
+For non-English replies, apply the same semantic test. Do not infer approval from tone, politeness, or conversational context alone.
 
-Acknowledgements and vague replies are not approval. This includes "OK" or "好的" when they plausibly mean "I understand", and hedged replies such as "sounds good", "why not", "I guess", "そうですね", or "pourquoi pas". When uncertain, ask for the context-specific confirmation: `Approve implementation` / `确认执行` in `standalone`, or `Approve plan and continue CDF flow` / `批准计划并继续 CDF 流程` in `cdf-managed`.
+Why: explicit action plus explicit scope prevents acknowledgement text from becoming implementation or persistence authorization.
 
-For non-English replies, use the same rule: the reply must clearly authorize the context-specific proposed action. If cultural or linguistic ambiguity remains, ask for explicit confirmation.
+## Approval Modes
 
-If the user gives partial or conditional approval, update the scope, risks, and test plan for the approved subset. In `standalone`, execute only the explicitly approved subset. In `cdf-managed`, return only the approved subset to CDF and do not edit. If the condition changes high-risk scope, ask for confirmation again.
+Support exactly these modes:
+
+### Full Approval
+
+The user approves the displayed action and complete Scope Lock. Record `Approval Type: full` and `Approved Items: all in_scope items`.
+
+### Conditional Approval
+
+The user explicitly approves an action subject to one or more concrete conditions.
+
+1. Normalize each condition into the applicable `in_scope`, `out_of_scope`, `non_goals`, `assumptions`, `stop_conditions`, `will_change`, or `will_not_change` field.
+2. Reject conditions that are ambiguous, conflict with acceptance criteria, or require an unplanned scope expansion.
+3. Record `Approval Type: conditional` and the exact normalized conditions in the Approval Record.
+4. The conditional Scope Lock replaces the earlier Scope Lock for all later handoff.
+
+Example: `批准并实施，但不得修改数据库 schema` is valid only after `database schema` appears in `will_not_change` or `non_goals`.
+
+### Partial Approval
+
+The user approves only explicitly named phases, tasks, or scope items.
+
+1. Create an approved-subset Scope Lock containing only the approved items and their necessary existing constraints.
+2. List every remaining item under `Unapproved Items`; do not treat it as implicitly approved.
+3. Record `Approval Type: partial` and the exact approved subset.
+4. Do not prepare implementation or CDTask handoff information for unapproved items.
+
+If a condition or partial selection adds new scope, changes architecture, introduces a Mandatory Escalation Signal, or changes acceptance meaning, treat the previous plan as stale, replan, rerun classification, and request approval again.
+
+## Locked Scope Echo
+
+After any valid full, conditional, or partial approval, immediately echo this concise summary before taking the authorized next action:
+
+```md
+## Locked Scope Summary
+
+### In Scope
+- ...
+
+### Will Not Change
+- ...
+
+### Non-Goals
+- ...
+
+Approval Type: <full | conditional | partial>
+Authorized Action: <Execute Now | Save as CDTask | Return Approved Plan Package to CDF>
+```
+
+Copy these items from the approved Scope Lock without paraphrasing. If the echo would differ from what the user approved, stop and ask for confirmation of the corrected Scope Lock instead of proceeding. A second approval is not required when the echo is an exact restatement and the user does not correct it.
+
+## Ambiguous Approval Follow-Up
+
+For an invalid or ambiguous reply, do not advance and do not repeat the entire plan. Use the user's language and ask:
+
+```md
+I need an explicit approval action for the locked scope before continuing.
+
+Choose one:
+1. `Execute Now` — approve implementation of the displayed Scope Lock.
+2. `Save as CDTask` — approve persistence and task handoff only; no implementation now.
+3. `Request changes` — revise the plan or Scope Lock.
+```
+
+In `cdf-managed`, replace options 1 and 2 with `Approve plan and continue CDF flow`; keep `Request changes`.
+
+A deferred-task approval approves task persistence only. It never authorizes implementation in the current turn. A managed approval means `PLAN_APPROVED`; return the Approved Plan Package to CDF and stop before `TASKING`.
 
 When resuming a standalone local task with `Contract-Version: cdp-cdtask/v1`, a clear request such as `Continue local task: <path>` or `继续执行本地 task：<path>` is implementation authorization for the saved scope only after the required target, evidence, branch, and commit re-checks pass. Do not request the same approval again when nothing material has changed. If the saved task conflicts with the current workspace or the plan must expand, update the plan and request approval again.
 
@@ -790,23 +1020,6 @@ In `standalone`, when the user explicitly hands the saved task to an external co
 If the user responds to an approval request with a new requirement instead of clear approval, do not treat it as approval and do not edit. Mark the previous approval request as stale, incorporate the new requirement, and rerun target check, requirement understanding, decomposition, evidence inspection, and final risk classification. Then produce an updated Level L approval request or Level XL design request as needed.
 
 If the new requirement merely narrows the proposed scope, treat it as partial or conditional approval only for the narrowed subset, update the scope, risks, and test plan, and take only the context-specific action when the remaining authorization is explicit. If the new requirement expands scope, changes architecture, touches a new high-risk area, or conflicts with the previous plan, request approval again for the revised plan.
-
-Invalid approval examples:
-
-- What do you think?
-- Explain more.
-- Is this risky?
-- Any other plan?
-- Continue analyzing.
-- Whatever.
-- Up to you.
-- 你觉得呢？
-- 还有别的方案吗？
-- 风险大吗？
-- 随便。
-- 好的。
-- そうですね。
-- Pourquoi pas.
 
 ## Final Response Rule
 
@@ -821,11 +1034,13 @@ Planning Status: <PLAN_READY | APPROVED>
 Lifecycle Owner: CDF
 Execution by CDP: Not authorized
 Code Changes by CDP: None
+Scope-Lock-Version: cdp-scope/v1
+Approval Type: <pending | full | conditional | partial>
 Handoff: <awaiting plan approval | ready for CDF tasking | blocked with reason ...>
 Next Owner: <Human approver | CDF>
 ```
 
-After managed approval, use `Handoff: ready for CDF tasking` and `Next Owner: CDF`, include the complete Development Plan content in the Approved Plan Package, and stop. Do not check CDTask availability, invoke CDTask, create a local task, offer CDP resume, or report implementation verification as completed.
+After managed approval, use `Handoff: ready for CDF tasking` and `Next Owner: CDF`, include the complete Development Plan, canonical Scope Lock, Approval Record, and Locked Scope Summary in the Approved Plan Package, and stop. Do not check CDTask availability, invoke CDTask, create a local task, offer CDP resume, or report implementation verification as completed.
 
 In `standalone`, after a deferred local task is saved, report:
 

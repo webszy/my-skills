@@ -210,6 +210,18 @@ Workspace: <absolute path or Unavailable>
 Source-Branch: <branch or Unavailable>
 Source-Commit: <commit or Unavailable>
 
+## Scope Lock
+
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
+
 ## Requirement Understanding
 ...
 
@@ -255,7 +267,11 @@ Source-Commit: <commit or Unavailable>
 ...
 
 ## Approval Record
-...
+- Approval Type: <full | conditional | partial>
+- Approved Items: <all in_scope items or exact approved subset>
+- Conditions Added To Scope Lock: <none or exact conditions>
+- Unapproved Items: <none or exact remaining items>
+- Scope Approved: Yes
 ```
 
 Within this internal handoff format, `Execution-Owner: cdf` records the component that receives control after task definition. It does not mean that CDF or CDTask executes code, and it does not define a runtime executor.
@@ -269,11 +285,12 @@ Require for every risk level:
 * `Approval-State: plan-approved`,
 * `Execution-Owner: cdf`,
 * `Risk-Level: Level S | Level M | Level L | Level XL`,
+* `Scope Lock` with `Scope-Lock-Version: cdp-scope/v1` and all eight required fields,
 * `Requirement Understanding`,
 * `Change Scope` with `Will Change` and `Will Not Change`,
 * `Acceptance Criteria`,
 * `Verification Strategy`,
-* `Approval Record` confirming human plan approval.
+* `Approval Record` confirming human plan approval, approval type, approved items, conditions, and any unapproved items.
 
 Require when available or relevant: `Requirement Decomposition`, `Confirmed Evidence`, `Open Assumptions`, `Risks`, and workspace/branch/commit metadata. Missing optional metadata must be reported as `Unavailable`; do not invent it.
 
@@ -289,25 +306,65 @@ When this contract is present:
 2. Confirm the Approval Record shows prior human plan approval.
 3. Validate required fields according to risk without weakening higher-risk controls.
 4. Reuse the approved plan as the source of truth. Do not ask the user to repeat approved information.
-5. Validate consistency and task readiness, but do not silently redesign, expand, narrow, or remove constraints from the approved plan.
-6. If task decomposition exposes a blocking conflict, missing required decision, or invalid approved premise, return `Tasking Status: BLOCKED` to CDF. Do not independently replan; CDF may return the flow to CDP.
-7. If a task definition can be repaired without changing approved scope, return it to draft, repair it, and rerun the Task Readiness Gate.
-8. Run Scope Lock, DAG Dependency Analysis, Managed Task Breakdown, Scope Guard Checklist, Execution Contract, and Task Readiness Gate.
-9. By default return the structured result to CDF without saving a file.
+5. Validate the Scope Lock verbatim and run Scope Lock Consistency Validation before decomposition.
+6. Validate consistency and task readiness, but do not silently redesign, expand, narrow, or remove constraints from the approved plan.
+7. If task decomposition exposes a blocking conflict, missing required decision, or invalid approved premise, return `Tasking Status: BLOCKED` to CDF. Do not independently replan; CDF may return the flow to CDP.
+8. If a task definition can be repaired without changing approved scope, return it to draft, repair it, and rerun the Task Readiness Gate.
+9. Run Scope Lock, DAG Dependency Analysis, Managed Task Breakdown, Scope Guard Checklist, Execution Contract, and Task Readiness Gate.
+10. By default return the structured result to CDF without saving a file.
 
 In CDF managed mode, do not introduce new implementation-affecting assumptions. If missing information would materially affect behavior, scope, architecture, API or data contracts, shared contracts, acceptance criteria, verification strategy, risk, product behavior, or implementation direction, return `Tasking Status: BLOCKED` to CDF. Do not guess, choose a default, or silently normalize the gap. CDF may return the flow to CDP for replanning or renewed approval.
 
 CDTask may derive task-definition details only when they are fully implied by the approved Plan and do not introduce a new implementation decision. Allowed derivations include assigning stable task IDs, making already-implied dependency edges explicit, normalizing headings, converting approved scope into Scope Lock, deriving conservative Write Scope from confirmed evidence, listing Shared Contracts already present in the approved Plan or evidence, and formatting approved Acceptance Criteria as task-level checklists.
 
+## Scope Lock Consistency Validation
+
+Run this validation for every `cdf-cdtask/v1` or `cdp-cdtask/v1` input before task decomposition and again before the Task Readiness Gate.
+
+### Contract Validation
+
+1. Require `Scope-Lock-Version: cdp-scope/v1`.
+2. Require arrays named exactly `in_scope`, `out_of_scope`, `non_goals`, `assumptions`, `stop_conditions`, `will_change`, `will_not_change`, and `acceptance_criteria`.
+3. Reject missing fields, placeholders, scalar replacements, or ambiguous catchalls such as `etc.`, `as needed`, or `unrelated changes` in restrictive fields.
+4. Treat the received Scope Lock as immutable approved data. Copy it into outputs verbatim; do not paraphrase, merge, reorder, omit, weaken, or broaden list items.
+5. Validate every readable projection, including `Change Scope`, `Scope Lock`, plan prose, phase boundaries, and high-level Acceptance Criteria, against the canonical block. A projection may add task-definition detail only when fully implied; it may not change meaning.
+6. Validate `Approval Type: full | conditional | partial`. Conditional approval must have its conditions represented in the Scope Lock. Partial approval must identify the exact approved subset and unapproved items; no task may be created for an unapproved item.
+
+### Task-to-Scope Validation
+
+For every proposed task, verify:
+
+- its Goal and Scope map to one or more `in_scope` items;
+- its Write Scope and affected contracts map to `will_change`;
+- it does not implement anything in `out_of_scope`, `non_goals`, or `will_not_change`;
+- its Implementation Notes do not turn `assumptions` into confirmed facts or new decisions;
+- its stop/escalation behavior preserves every applicable `stop_conditions` item;
+- its task-level acceptance criteria refine, and never replace or weaken, the high-level `acceptance_criteria`.
+
+Do not allow `non_goals` to be summarized as generic prose. Preserve each item as an explicit prohibition in Scope Guard and `Must Not Change` checks.
+
+### Validation Outcomes
+
+- `READY`: every task maps to the Scope Lock, all prohibitions are preserved, and no scope item changed meaning.
+- `NOT_READY`: CDTask introduced a task-definition-only defect, such as an extra task, omitted prohibition, or mismatched derived field, and can remove or repair it without changing the approved plan. Repair and rerun validation.
+- `BLOCKED`: the Scope Lock is missing, invalid, internally conflicting, inconsistent with the approved plan, or too narrow for the requested task breakdown; a new impact area, assumption, decision, or scope extension would be required.
+
+For `BLOCKED`, return the exact conflict to CDF for managed input or direct the standalone user back to CDP. Any scope expansion requires CDP replanning, a new `cdp-scope/v1` block, and renewed human approval. CDTask has no authority to expand scope.
+
+Why: task decomposition is allowed to add structure, not implementation meaning.
+
 ## CDF-to-Scope-Lock Mapping
 
 Apply this mapping without expanding the approved plan:
 
-* `In Scope` <- `Change Scope / Will Change`
-* `Out Of Scope` <- `Change Scope / Will Not Change`
-* `Non-Goals That Must Not Be Implemented` <- explicit prohibitions and approved exclusions only
-* `Assumptions` <- existing approved `Open Assumptions` only; do not add implementation-affecting assumptions
-* `Stop Conditions` <- approval constraints, material conflict, scope expansion, architecture change, risk escalation, unresolved write scope that prevents safe tasking, and explicit project prohibitions
+* `In Scope` <- `Scope Lock / in_scope`
+* `Out Of Scope` <- `Scope Lock / out_of_scope`
+* `Non-Goals That Must Not Be Implemented` <- `Scope Lock / non_goals`
+* `Assumptions` <- `Scope Lock / assumptions`
+* `Stop Conditions` <- `Scope Lock / stop_conditions`
+* allowed task write areas <- `Scope Lock / will_change`
+* protected areas and behavior <- `Scope Lock / will_not_change`
+* high-level task coverage <- `Scope Lock / acceptance_criteria`
 
 Do not turn future notes into current tasks. Do not invent architecture or remove approved constraints.
 
@@ -329,26 +386,39 @@ Risk-Level: Level L / Level XL
 Approval-State: scope-approved-execution-deferred
 Source-Branch: ...
 Source-Commit: ...
+
+## Scope Lock
+
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
 ```
 
 It must also contain these sections with the exact headings:
 
-1. `Requirement Understanding`
-2. `Requirement Decomposition`
-3. `Confirmed Evidence`
-4. `Open Assumptions`
-5. `Change Scope`, including `Will Change` and `Will Not Change`
-6. `Proposed Design`
-7. `Data Model / API / State Flow`
-8. `Approved Phase Boundary`
-9. `Implementation Plan / Phases`
-10. `Risks`
-11. `Acceptance Criteria`
-12. `Test Plan / Test Strategy`
-13. `Rollback Plan`
-14. `Approval Record`
-15. `Handoff Execution Paths`
-16. `Resume Rules`
+1. `Scope Lock` containing `Scope-Lock-Version: cdp-scope/v1` and all eight required fields
+2. `Requirement Understanding`
+3. `Requirement Decomposition`
+4. `Confirmed Evidence`
+5. `Open Assumptions`
+6. `Change Scope`, including `Will Change` and `Will Not Change`
+7. `Proposed Design`
+8. `Data Model / API / State Flow`
+9. `Approved Phase Boundary`
+10. `Implementation Plan / Phases`
+11. `Risks`
+12. `Acceptance Criteria`
+13. `Test Plan / Test Strategy`
+14. `Rollback Plan`
+15. `Approval Record`
+16. `Handoff Execution Paths`
+17. `Resume Rules`
 
 For Level XL, `Proposed Design`, `Data Model / API / State Flow`, and `Approved Phase Boundary` must contain the approved design content. For Level L, these headings remain present with `Not applicable for Level L.` so the interface stays structurally stable.
 
@@ -361,9 +431,10 @@ When this contract is present:
 3. Confirm that `Approval-State` is `scope-approved-execution-deferred`.
 4. Confirm that the approval record says scope is approved and code changes are not authorized in the current turn.
 5. Confirm that every required heading is present and that no blocking placeholder or unresolved conflict remains.
-6. Reuse the approved CDP content as the source of truth. Do not ask the user to repeat already confirmed scope, evidence, risks, or acceptance criteria.
-7. Normalize approval-display labels into the exact package headings before validation. For example, `Will change:` maps to `Will Change`; do not reject a valid package because the prior chat template used different capitalization.
-8. Run the normal Scope Lock, Task Breakdown, Scope Guard, Codex Handoff Rules, and Task Readiness Gate using that content.
+6. Confirm the Scope Lock block was copied verbatim from the approved CDP plan and run Scope Lock Consistency Validation.
+7. Reuse the approved CDP content as the source of truth. Do not ask the user to repeat already confirmed scope, evidence, risks, or acceptance criteria.
+8. Normalize approval-display labels into the exact package headings before validation. For example, `Will change:` maps to `Will Change`; do not reject a valid package because the prior chat template used different capitalization. Never normalize or rewrite the canonical Scope Lock block.
+9. Run the normal Scope Lock, Task Breakdown, Scope Guard, Codex Handoff Rules, and Task Readiness Gate using that content.
 
 If a required field or section is missing, ask only for the missing information. If the package conflicts with itself, mark it `Not Ready` and do not save a ready task.
 
@@ -371,15 +442,18 @@ The CDP approval authorizes creation of the local task document only. It does no
 
 ## CDP-to-Scope-Lock Mapping
 
-Apply this mapping without inference:
+Use the canonical `cdp-scope/v1` block directly. Do not reconstruct it from `Change Scope`, `Open Assumptions`, `Resume Rules`, or plan prose.
 
-* `In Scope` <- `Change Scope / Will Change`
-* `Out Of Scope` <- `Change Scope / Will Not Change`
-* `Non-Goals That Must Not Be Implemented` <- copy every explicit prohibition from `Will Not Change`; add only prohibitions already present elsewhere in the package.
-* `Assumptions` <- `Open Assumptions`
-* `Stop Conditions` <- `Resume Rules`, `Code Changes Authorized In This Turn: No`, material-drift rules, and explicit project prohibitions.
+* `In Scope` <- `Scope Lock / in_scope`
+* `Out Of Scope` <- `Scope Lock / out_of_scope`
+* `Non-Goals That Must Not Be Implemented` <- `Scope Lock / non_goals`
+* `Assumptions` <- `Scope Lock / assumptions`
+* `Stop Conditions` <- `Scope Lock / stop_conditions`
+* allowed task write areas <- `Scope Lock / will_change`
+* protected areas and behavior <- `Scope Lock / will_not_change`
+* high-level task coverage <- `Scope Lock / acceptance_criteria`
 
-Do not invent additional scope, non-goals, or stop conditions while mapping.
+Do not invent additional scope, non-goals, assumptions, stop conditions, or acceptance meaning while mapping.
 
 ## Handoff Execution Paths
 
@@ -484,6 +558,22 @@ For a valid `cdf-cdtask/v1` package, treat CDP planning and human plan approval 
 
 Before producing tasks, extract and restate the implementation boundary.
 
+For `cdf-cdtask/v1` and `cdp-cdtask/v1`, first reproduce the received canonical block verbatim:
+
+```yaml
+Scope-Lock-Version: cdp-scope/v1
+in_scope: [...]
+out_of_scope: [...]
+non_goals: [...]
+assumptions: [...]
+stop_conditions: [...]
+will_change: [...]
+will_not_change: [...]
+acceptance_criteria: [...]
+```
+
+Then produce the readable projection below. The projection must map one-to-one to the canonical fields and cannot replace them.
+
 Always include:
 
 ```markdown
@@ -503,6 +593,15 @@ Always include:
 
 ### Stop Conditions
 - ...
+
+### Will Change
+- ...
+
+### Will Not Change
+- ...
+
+### High-Level Acceptance Criteria
+- ...
 ```
 
 ## Scope Lock Rules
@@ -519,6 +618,9 @@ Always include:
 10. If the requirement says only backend write logic is in scope, do not include frontend, shared schema, OpenAPI, or display tasks.
 11. For `cdf-cdtask/v1`, derive Scope Lock from the approved plan without expanding scope, inventing architecture, silently removing constraints, or converting future notes into current tasks.
 12. If managed decomposition reveals a contradiction in the approved plan, return `BLOCKED` to CDF; do not independently replan.
+13. For either approved contract, preserve every canonical Scope Lock list item verbatim in the stored or returned artifact.
+14. If CDTask itself introduces an out-of-scope task or drops a prohibition, use `NOT_READY`, repair the task definition, and rerun validation.
+15. If satisfying the requested breakdown requires new scope, changed assumptions, or weakened prohibitions, use `BLOCKED` and return to CDP for replanning and renewed approval.
 
 ---
 
@@ -802,7 +904,7 @@ These rules govern Path B only after the user explicitly instructs the external 
 5. Do not modify unrelated files.
 6. If current code conflicts with the requirement document, stop and report the conflict before inventing a solution.
 7. After each task, self-check against that task's acceptance criteria.
-8. After all tasks are complete, proactively perform a code review of the changed files. Fix findings that are within the approved scope; report and stop before addressing findings that would expand scope.
+8. After all tasks, check the reported result against the task acceptance criteria and Scope Lock. Do not perform an independent code review or automatic fix loop as part of this handoff.
 9. After all tasks, output:
    - changed files,
    - completed tasks,
@@ -888,6 +990,14 @@ The assistant must check whether the final document contains:
 16. contradiction between "first version" constraints and proposed tasks,
 17. missing stop conditions for the executor,
 18. missing rules for handling code/document conflicts.
+
+For approved `cdf-cdtask/v1` and `cdp-cdtask/v1` handoffs also check:
+
+- missing or changed `Scope-Lock-Version: cdp-scope/v1`;
+- any missing, reordered, paraphrased, weakened, or broadened Scope Lock item;
+- vague or collapsed `non_goals` instead of item-by-item prohibitions;
+- tasks, write areas, contracts, or acceptance criteria that do not map to approved Scope Lock fields;
+- any required scope expansion that has not returned to CDP and passed renewed approval.
 
 For managed tasks also check:
 
@@ -1146,7 +1256,7 @@ For `source: cdp` and `source: manual`, use this document order after the frontm
 ...
 
 ## Scope Lock
-...
+- [Include the complete canonical `cdp-scope/v1` block verbatim, followed by its readable projection.]
 
 ## Dependency Order
 ...
@@ -1215,7 +1325,7 @@ For `source: cdf`, use this managed document order instead. Do not include the s
 ...
 
 ## Scope Lock
-...
+- [Include the complete canonical `cdp-scope/v1` block verbatim, followed by its readable projection.]
 
 ## Dependency Graph
 ...
@@ -1257,10 +1367,11 @@ After writing the file, read it back and verify:
 3. Managed CDF input uses `task_contract: cdf-cdtask/v1`, `source: cdf`, `approval_state: plan-approved`, `execution_owner: cdf`, and `status: tasking_ready`.
 4. The workspace and source traceability match the input.
 5. Every required section exists.
-6. The Task Readiness Gate says the task is ready for its declared destination: resume for CDP input, review or handoff planning for manual input, or return to CDF for managed input.
-7. A managed document contains no standalone resume command and names CDF as next owner.
-8. A managed document contains `Dependency Graph` and `Dependency Data` and does not contain the standalone/manual `Dependency Order` section.
-9. No implementation file changed as part of the save flow.
+6. Approved CDP/CDF input preserves the complete `cdp-scope/v1` block verbatim and passes Scope Lock Consistency Validation.
+7. The Task Readiness Gate says the task is ready for its declared destination: resume for CDP input, review or handoff planning for manual input, or return to CDF for managed input.
+8. A managed document contains no standalone resume command and names CDF as next owner.
+9. A managed document contains `Dependency Graph` and `Dependency Data` and does not contain the standalone/manual `Dependency Order` section.
+10. No implementation file changed as part of the save flow.
 
 If verification fails, do not claim the task was saved successfully.
 
@@ -1286,7 +1397,7 @@ This skill is complete only when one of the following outcomes is reached.
 
 The final task breakdown contains:
 
-* scope lock,
+* a complete canonical `cdp-scope/v1` Scope Lock for approved handoffs, preserved verbatim and validated against every task,
 * non-goals,
 * dependency order for standalone/manual input, or a Dependency Graph and Dependency Data for managed input,
 * task breakdown,
@@ -1541,7 +1652,7 @@ Use when the input is a valid `CDF Tasking Handoff` with `Contract-Version: cdf-
 Process:
 
 1. Validate the managed contract and prior plan approval without asking the user to repeat approved information.
-2. Derive Scope Lock and task-definition details only when fully implied by the approved Plan and confirmed evidence.
+2. Preserve the canonical Scope Lock verbatim and run Scope Lock Consistency Validation; derive task-definition details only when fully implied by the approved Plan and confirmed evidence.
 3. Build the DAG Dependency Graph and managed task definitions with stable IDs, Dependencies, Write Scope, Shared Contracts, Acceptance Criteria, Must Not Change, Verification, Risk, and draft status.
 4. Produce the Scope Guard Checklist and executor-neutral Execution Contract.
 5. Run the Task Readiness Gate.
@@ -1796,15 +1907,16 @@ When using this skill:
 15. For a valid `cdp-cdtask/v1` package, do not re-ask questions already resolved by CDP.
 16. For a valid `cdf-cdtask/v1` package, preserve prior plan approval and return `READY`, `NOT_READY`, or `BLOCKED` to CDF without replanning.
 17. In managed mode, do not add implementation-affecting assumptions or defaults. Derive only task-definition details fully implied by the approved Plan; otherwise return `BLOCKED` to CDF.
-18. Modify only the designated task document when local saving is requested; do not modify implementation files.
-19. Do not claim a local task was saved until Save Verification passes.
-20. Never label manual input as `source: cdp` or `source: cdf`, or copy either approval state into it.
-21. Treat `Tasking Status: READY` and artifact `status: tasking_ready` as task-definition readiness, not runtime execution state.
-22. Treat "ready for handoff", `ready_for_resume`, `ready_for_review`, and `tasking_ready` as distinct states.
-23. Do not decide scheduling or final sequential/parallel/mixed execution strategy.
-24. Do not assign independent final implementation review as a CDTask responsibility.
-25. Stop managed flow before `EXECUTING` and return it to CDF.
-26. End with the current status:
+18. For either approved contract, copy `cdp-scope/v1` verbatim, preserve each non-goal as an explicit prohibition, and run Scope Lock Consistency Validation before reporting readiness.
+19. Modify only the designated task document when local saving is requested; do not modify implementation files.
+20. Do not claim a local task was saved until Save Verification passes.
+21. Never label manual input as `source: cdp` or `source: cdf`, or copy either approval state into it.
+22. Treat `Tasking Status: READY` and artifact `status: tasking_ready` as task-definition readiness, not runtime execution state.
+23. Treat "ready for handoff", `ready_for_resume`, `ready_for_review`, and `tasking_ready` as distinct states.
+24. Do not decide scheduling or final sequential/parallel/mixed execution strategy.
+25. Do not assign independent final implementation review as a CDTask responsibility.
+26. Stop managed flow before `EXECUTING` and return it to CDF.
+27. End with the current status:
 
     * Ready for task handoff; implementation is not authorized by document readiness alone.
     * Not ready yet; user confirmation required.

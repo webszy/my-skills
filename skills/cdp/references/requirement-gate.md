@@ -165,7 +165,9 @@ After clarification:
 
 Use this list as the single source of truth for high-risk checks:
 
-- Database schema, migrations, destructive data changes, or data backfills.
+- Shared components, shared UI primitives, theme systems, design tokens, or global state.
+- Conditional rendering, feature gates, entitlement checks, or permission-dependent behavior.
+- Persistent data creation, mutation, deletion, database schema, migrations, destructive data changes, or data backfills.
 - Payment, billing, subscription, IAP, paywall, or pricing logic.
 - Revenue, cost, ROI, reports, analytics, or business metric logic.
 - Authentication, authorization, permissions, or user data.
@@ -177,6 +179,7 @@ Use this list as the single source of truth for high-risk checks:
 - Architecture changes, new modules, major refactors, major data-flow redesign, or phased rollout.
 - Localization, i18n, accessibility, or compliance behavior.
 - Security, privacy, or observability-sensitive behavior.
+- Insufficient evidence or materially conflicting evidence about any risk boundary above.
 
 ## Requirement Gate vs Level S / L / XL
 
@@ -462,4 +465,3 @@ User:
 Agent:
 Treat suggested defaults as explicit assumptions, restate them, then continue into the CDP workflow.
 ```
-

@@ -44,7 +44,7 @@ The folder name and `SKILL.md` frontmatter `name` match intentionally. This keep
 
 `cdp` includes `references/karpathy-guidelines.md` as a bundled MIT-licensed reference for coding-agent guardrails: think before coding, keep changes simple, make surgical edits, and define verifiable success criteria.
 
-For Level M, Level L, and Level XL tasks, the agent must read this reference before producing a plan, design, or implementation. For Level S tasks, reading it is optional so simple changes stay lightweight. Read it for Level S only when target search finds objective signals such as shared code used by multiple modules, more than five references, more than one touched file/module, shared design tokens or primitives, a failed previous attempt, or overlap with high-risk paths.
+For Level M, Level L, and Level XL tasks, the agent must read this reference before producing a plan, design, or implementation. For Level S tasks, reading it is optional so simple changes stay lightweight; use it after a failed attempt or when extra minimal-change guardrails are needed after the reverse check passes. Shared code, multiple affected modules, design tokens/primitives, generated code, common configuration, or high-risk path overlap require reclassification rather than remaining Level S.
 
 The reference is included so users do not need to install `karpathy-guidelines` separately.
 
@@ -99,7 +99,14 @@ This must be visible to the user before any plan, approval request, or edit. Thi
 
 The agent should perform an initial classification into Level S, Level M, Level L, or Level XL only after Requirement Gate has passed and after requirement understanding and decomposition.
 
-If decomposition reveals high-risk areas such as data, money, security, permissions, reporting, scheduled tasks, or production configuration, the task should be upgraded to Level L or Level XL even when the visible change looks small.
+The levels are checkable rules:
+
+- Level S requires a single non-shared target, local static presentation only, no behavior/data/contract/configuration change, sufficient consistent evidence, and a complete low-risk reverse check.
+- Level M requires one bounded reversible feature flow, known inputs/outputs/failure behavior, no shared/global surface, no high-risk signal, sufficient consistent evidence, and the same reverse check.
+- Level L applies when any shared component/theme/global state, conditional rendering/permission behavior, cache, analytics, i18n, configuration, job/event, persistent-data write, billing, authentication, authorization, production configuration, or similar high-risk signal is present.
+- Level XL applies when a new module/service, architecture or major data-flow redesign, coordinated migration, or approval-controlled phased delivery is required.
+
+Before finalizing S or M, the agent must rescan for every mandatory escalation signal. Any positive signal upgrades to at least Level L; any unknown signal prevents S/M finalization.
 
 The initial classification should be visible to the user together with requirement understanding and decomposition.
 
@@ -111,13 +118,21 @@ For Level M, Level L, and Level XL tasks, the plan or design should be grounded 
 
 After evidence inspection, the agent should finalize or upgrade the risk level. If evidence reveals a higher-risk area, it should reclassify immediately and switch to the stricter workflow.
 
-If the evidence is insufficient, the agent should continue inspecting or pause and ask the user instead of outputting a generic plan.
+If evidence is insufficient, the agent records the missing evidence, continues safe read-only inspection, or asks the smallest targeted question. It uses provisional Level L controls when higher-risk impact cannot be ruled out and blocks managed planning when the gap changes scope, behavior, risk, or approval meaning.
+
+If evidence conflicts, the agent lists the conflicting claims and sources, uses the highest supported risk, asks for an authoritative decision, and marks the plan blocked until the conflict is resolved. It never chooses the lower-risk interpretation for convenience.
 
 Level S should stay concise, but it still requires enough file or search evidence to locate the exact target and avoid changing the wrong copy, style source, or component.
 
+## Scope Lock Contract
+
+Every approvable or handoff-ready plan contains an internal `Scope-Lock-Version: cdp-scope/v1` block with required arrays for `in_scope`, `out_of_scope`, `non_goals`, `assumptions`, `stop_conditions`, `will_change`, `will_not_change`, and high-level `acceptance_criteria`.
+
+This block is the canonical scope source. CDF and CDTask copy it verbatim; they may not paraphrase, weaken, omit, or expand it. Any required expansion returns to CDP for replanning and renewed approval.
+
 ## Workflow Levels
 
-### Level S: Direct Edit
+### Level S: Lightweight Plan and Decision
 
 For simple UI, copy, and style changes.
 
@@ -131,12 +146,12 @@ Examples:
 
 Agent behavior:
 
-- Edit directly.
-- Do not ask for confirmation.
+- Produce a compact Development Plan and Scope Lock.
+- Recommend `Execute Now`, then wait for the user's explicit Next Action choice.
 - Do not create a long plan.
 - Provide a brief summary, verification performed, and relevant manual checks after editing.
 
-### Level M: Brief Plan Then Edit
+### Level M: Brief Plan and Decision
 
 For normal scoped feature changes.
 
@@ -151,8 +166,8 @@ Examples:
 Agent behavior:
 
 - Give a compact evidence-backed plan.
-- Proceed if the requirement is clear.
-- Ask only if ambiguous.
+- Include the canonical Scope Lock and recommend a Next Action.
+- Wait for the user's explicit Next Action choice before implementation or task persistence.
 - Provide verification performed and relevant manual checks after editing.
 
 Compact Level M format:
@@ -176,7 +191,7 @@ Plan:
 1. ...
 2. ...
 
-I’ll proceed because this is scoped and does not touch high-risk areas.
+Recommendation: Execute Now because this is scoped and passed the S/M reverse check. Awaiting explicit user choice.
 ```
 
 ### Level L: Approval Required
@@ -231,14 +246,18 @@ If partial edits have already created syntax errors, broken imports, failed form
 
 ## Approval and Verification
 
-For Level L and Level XL, approval must clearly authorize code changes for the stated scope. Ambiguous acknowledgements such as `OK`, `好的`, `sounds good`, `そうですね`, or `pourquoi pas` are not enough when they could simply mean "I understand"; the agent should ask for explicit approval. Partial approval applies only to the approved subset.
+For Level L and Level XL, approval must identify both the action and the approved Scope Lock, phase, task, or subset. Explicit forms such as `Approve and implement`, `批准并实施`, or `同意按此范围执行` are valid. Standalone acknowledgements such as `ok`, `继续`, `可以`, `嗯`, `Proceed`, or `go ahead` are invalid and trigger a short context-specific confirmation prompt.
+
+CDP supports full approval, conditional approval, and partial approval. Conditions must be normalized into the Scope Lock. Partial approval creates an approved-subset Scope Lock and leaves every other item explicitly unapproved. Scope-expanding conditions require replanning and renewed approval.
+
+After valid approval, CDP echoes a Locked Scope Summary containing `in_scope`, `will_not_change`, and `non_goals`, plus approval type and authorized action. The echo must copy approved items without paraphrasing.
 
 Every Level L and Level XL approval request offers two explicit outcomes:
 
-- `Approve and implement` / `同意并修改`: authorize code changes for the displayed scope or current phase.
-- `Approve and save as local task` / `同意并保存为本地 task`: approve the scope, defer implementation, and hand a `cdp-cdtask/v1` package to `cdtask`.
+- `Execute Now` (`Approve and implement` / `同意并修改`): authorize code changes for the displayed Scope Lock or current approved phase.
+- `Save as CDTask` (`Approve and save as local task` / `同意并保存为本地 task`): approve the Scope Lock, defer implementation, and hand a `cdp-cdtask/v1` package to `cdtask`.
 
-The deferred outcome does not authorize implementation changes in the current turn. CDTask validates the package, creates a dependency-ordered task breakdown, runs its final review, and saves it with `status: ready_for_resume`. An explicit path is used when supplied; otherwise the default is `_cdtask/YYYY-MM-DD-<slug>.md` under the current workspace.
+The deferred outcome does not authorize implementation changes in the current turn. CDTask validates the package and Scope Lock, creates a dependency-aware task breakdown, runs its Task Readiness Gate, and saves it with `status: ready_for_resume`. An explicit path is used when supplied; otherwise the default is `_cdtask/YYYY-MM-DD-<slug>.md` under the current workspace.
 
 CDP checks that CDTask is available before generating the handoff package or creating local files. If CDTask is unavailable, CDP does not create `_cdtask`, does not save a fallback document, and does not install anything automatically. It outputs:
 

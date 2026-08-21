@@ -42,7 +42,7 @@ CDP 在选择工作流等级前，会先判断需求是否达到可执行清晰�
 
 `cdp` 内置了 `references/karpathy-guidelines.md`，作为 MIT 协议的编码 Agent 行为参考：先思考再编码、保持简单、做外科手术式修改，并定义可验证的成功标准。
 
-对于 Level M、Level L 和 Level XL 任务，Agent 必须先读取这份参考，再输出计划、设计或开始实现。对于 Level S 任务，读取这份参考是可选的，以保持简单改动足够轻量。只有当目标搜索发现客观信号时才读取，例如目标被多个模块共享、引用超过五处、需要改多个文件/模块、涉及共享设计 token 或基础组件、当前任务已有失败尝试，或路径与高风险区域重叠。
+对于 Level M、Level L 和 Level XL 任务，Agent 必须先读取这份参考，再输出计划、设计或开始实现。对于 Level S 任务，读取这份参考是可选的，以保持简单改动足够轻量；仅在当前任务已有失败尝试，或通过反向检查后仍需要额外最小改动约束时读取。共享代码、多模块影响、设计 token/基础组件、生成代码、公共配置或高风险路径重叠都必须触发重新分级，而不是继续停留在 Level S。
 
 这份参考已经随 `cdp` 打包，用户不需要额外安装 `karpathy-guidelines`。
 
@@ -97,7 +97,14 @@ Understanding: Change the submit button color only. No behavior change.
 
 Agent 只能在需求闸门通过、需求理解和需求拆解之后，对任务进行 Level S、Level M、Level L 或 Level XL 的初始分级。
 
-如果拆解后发现涉及数据、金钱、安全、权限、报表、定时任务或生产配置等高风险区域，即使可见变化很小，也应升级为 Level L 或 Level XL。
+风险等级采用可检查规则：
+
+- Level S 必须同时满足：单一非共享目标、仅本地静态展示、不改变行为/数据/契约/配置、证据充分且一致，并通过完整低风险反向检查。
+- Level M 必须同时满足：单一且有边界的可逆功能流、输入/输出/失败行为明确、不涉及共享或全局表面、不含高风险信号、证据充分且一致，并通过同一反向检查。
+- Level L 只要出现任一共享组件/主题/全局状态、条件渲染/权限、缓存、埋点、i18n、配置、任务/事件、持久化数据写入、计费、认证授权或生产配置等信号就成立。
+- Level XL 适用于新模块/服务、架构或重大数据流重设计、协调迁移，或需要审批控制的分阶段交付。
+
+在最终判定 S/M 前，Agent 必须重新扫描全部强制升级信号。任一信号命中至少升级到 Level L；任一信号为未知时，不得最终判为 S/M。
 
 初始风险分级应和需求理解、需求拆解一起对用户可见。
 
@@ -109,13 +116,21 @@ Agent 只能在需求闸门通过、需求理解和需求拆解之后，对任�
 
 完成证据检查后，Agent 应最终确认或升级风险等级。如果证据显示存在更高风险区域，应立即重新分级，并切换到更严格的工作流。
 
-如果证据不足，Agent 应继续检查或暂停询问用户，而不是输出模板化计划。
+如果证据不足，Agent 应记录缺失项，继续安全的只读检查，或提出最少的定向问题。无法排除高风险时采用临时 Level L 控制；缺口影响范围、行为、风险或审批含义时，managed planning 必须进入 BLOCKED。
+
+如果证据冲突，Agent 应列出冲突结论及来源，采用各可信来源支持的最高风险等级，请求权威决策，并在冲突解决前将计划标记为 BLOCKED。不得为了方便选择低风险解释。
 
 Level S 应保持简洁，但仍需要足够的文件或搜索证据来定位准确目标，避免改错文案、样式来源或组件。
 
+## Scope Lock 契约
+
+每个可审批或可交接计划都必须包含内部 `Scope-Lock-Version: cdp-scope/v1`，并具备 `in_scope`、`out_of_scope`、`non_goals`、`assumptions`、`stop_conditions`、`will_change`、`will_not_change` 和高层 `acceptance_criteria` 八个数组字段。
+
+该区块是唯一范围事实源。CDF 和 CDTask 必须原样复制，不得改写、弱化、遗漏或扩大。任何必要扩展都必须返回 CDP 重新规划并再次审批。
+
 ## 工作流等级
 
-### Level S：直接修改
+### Level S：轻量计划与决策
 
 用于简单 UI、文案和样式改动。
 
@@ -129,12 +144,12 @@ Level S 应保持简洁，但仍需要足够的文件或搜索证据来定位准
 
 Agent 行为：
 
-- 直接修改。
-- 不请求确认。
+- 输出精简 Development Plan 和 Scope Lock。
+- 推荐 `Execute Now`，然后等待用户明确选择 Next Action。
 - 不输出长计划。
 - 修改后提供简短总结、已执行的验证和相关人工检查项。
 
-### Level M：简短计划后修改
+### Level M：简短计划与决策
 
 用于普通、范围明确的小功能改动。
 
@@ -149,8 +164,8 @@ Agent 行为：
 Agent 行为：
 
 - 先给基于证据的极简计划。
-- 需求清晰时直接继续执行。
-- 仅在需求有歧义时提问。
+- 包含规范化 Scope Lock 并推荐 Next Action。
+- 在实现或保存 task 前等待用户明确选择 Next Action。
 - 修改后提供已执行的验证和相关人工检查项。
 
 Level M 极简格式：
@@ -174,7 +189,7 @@ Plan:
 1. ...
 2. ...
 
-I’ll proceed because this is scoped and does not touch high-risk areas.
+Recommendation: Execute Now because this is scoped and passed the S/M reverse check. Awaiting explicit user choice.
 ```
 
 ### Level L：需要确认
@@ -229,14 +244,18 @@ Agent 行为：
 
 ## 审批与验证
 
-对于 Level L 和 Level XL，批准必须明确授权在指定范围内修改代码。`OK`、`好的`、`sounds good`、`そうですね` 或 `pourquoi pas` 这类可能只是“我知道了”的模糊回复不算明确批准，Agent 应要求用户给出明确确认。部分批准只适用于已被批准的子范围。
+对于 Level L 和 Level XL，有效批准必须同时明确“动作”和获批的 Scope Lock、阶段、任务或子集。`Approve and implement`、`批准并实施`、`同意按此范围执行` 等属于明确批准；单独的 `ok`、`继续`、`可以`、`嗯`、`Proceed` 或 `go ahead` 无效，Agent 必须使用简短的上下文追问模板再次确认。
+
+CDP 支持完整批准、带条件批准和部分批准。条件必须写入 Scope Lock；部分批准必须生成仅包含获批子集的 Scope Lock，并把其余内容明确标记为未批准。任何扩大范围的条件都必须重新规划并再次审批。
+
+有效批准后，CDP 必须回显 Locked Scope Summary，至少包含 `in_scope`、`will_not_change`、`non_goals`、批准类型和授权动作，并原样复制已批准内容。
 
 每个 Level L 和 Level XL 审批请求都提供两个明确选项：
 
-- `Approve and implement` / `同意并修改`：授权修改当前展示范围或当前阶段内的代码。
-- `Approve and save as local task` / `同意并保存为本地 task`：批准当前范围、延期实施，并把 `cdp-cdtask/v1` 交接包交给 `cdtask`。
+- `Execute Now`（`Approve and implement` / `同意并修改`）：授权修改当前展示的 Scope Lock 或当前获批阶段内的代码。
+- `Save as CDTask`（`Approve and save as local task` / `同意并保存为本地 task`）：批准 Scope Lock、延期实施，并把 `cdp-cdtask/v1` 交接包交给 `cdtask`。
 
-延期保存选项不授权当前回合修改实现文件。CDTask 会校验交接包、生成按依赖排序的任务拆分、执行最终审查，并以 `status: ready_for_resume` 保存。用户指定路径时优先使用；否则默认保存到当前工作区的 `_cdtask/YYYY-MM-DD-<slug>.md`。
+延期保存选项不授权当前回合修改实现文件。CDTask 会校验交接包和 Scope Lock、生成依赖感知的任务拆分、运行 Task Readiness Gate，并以 `status: ready_for_resume` 保存。用户指定路径时优先使用；否则默认保存到当前工作区的 `_cdtask/YYYY-MM-DD-<slug>.md`。
 
 CDP 会在生成交接包或创建本地文件之前检查 CDTask 是否可用。如果 CDTask 不可用，CDP 不创建 `_cdtask`、不保存降级文档，也不自动安装，只输出：
 
