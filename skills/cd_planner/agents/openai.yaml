@@ -1,0 +1,6 @@
+interface:
+  display_name: "cd_planner"
+  short_description: "Clarifies requirements, then chooses risk-based coding workflow"
+  default_prompt: "Use $cd_planner to clarify vague requirements, then choose the lightest safe workflow for this coding task."
+policy:
+  allow_implicit_invocation: false

@@ -25,19 +25,19 @@ Do not add extra documentation inside the skill folder unless it is required by 
 After pushing the repository to GitHub, install the skill for Codex with:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -g -y
+npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -g -y
 ```
 
 Install for Claude Code with:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdp -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cd_planner -a claude-code -g -y
 ```
 
 Install for both with:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -a claude-code -g -y
 ```
 
 ## Validation checklist

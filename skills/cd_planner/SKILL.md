@@ -1,6 +1,6 @@
 ---
-name: cdp
-description: Use when the user invokes cdp, $cdp, cdp:, or controlled-development-planning, when CDF explicitly invokes CDP for planning-only managed work, or when Codex or Claude needs to clarify vague requirements before implementation, modify code, implement features, fix bugs, refactor modules, change UI or backend behavior, update APIs, adjust data flows, or work in high-risk areas such as database schema, billing, subscriptions, IAP, reports, authentication, permissions, scheduled jobs, queues, production configuration, or architecture design.
+name: cd_planner
+description: Use when the user invokes cd_planner, $cd_planner, cd_planner:, or controlled-development-planning, when CDF explicitly invokes CDP for planning-only managed work, or when Codex or Claude needs to clarify vague requirements before implementation, modify code, implement features, fix bugs, refactor modules, change UI or backend behavior, update APIs, adjust data flows, or work in high-risk areas such as database schema, billing, subscriptions, IAP, reports, authentication, permissions, scheduled jobs, queues, production configuration, or architecture design.
 ---
 
 # cdp: Controlled Development Planning
@@ -512,7 +512,7 @@ This gate applies only to the standalone `Approve and save as local task` outcom
 - Output the exact install command below, then stop:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cd_task -a codex -a claude-code -g -y
 ```
 
 Use this response shape:
