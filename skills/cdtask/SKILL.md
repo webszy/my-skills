@@ -1,13 +1,13 @@
 ---
 name: cdtask
-description: Use this skill when CDF provides an approved planning result for managed tasking, or when the user wants to split an existing requirement document, PRD, technical proposal, implementation plan, or approved standalone CDP handoff package into scoped, dependency-aware, verifiable execution units. It may optionally persist designated task documents, but it does not implement source code, invoke executors, schedule tasks, or perform implementation review.
+description: Convert approved development plans into scoped task definitions and executor handoff information. Use when CDF provides an approved plan for managed tasking, when standalone CDP hands off approved work for persistence, or when the user asks to split a stable requirement or plan into dependency-aware tasks. CDTask may optionally persist designated task documents, but it does not execute, schedule, or manage the development lifecycle.
 ---
 
 # Controlled Development Task
 
 ## Purpose
 
-CDTask is the task protocol and tasking engine that converts an approved development plan into scoped, dependency-aware, verifiable execution units.
+CDTask is the task-definition and handoff skill that converts an approved development plan into scoped, dependency-aware, verifiable task definitions and executor handoff information.
 
 ```text
 Approved Plan
@@ -23,6 +23,8 @@ This skill has three first-class inputs:
 * an approved `cdf-cdtask/v1` planning result from CDF for managed tasking,
 * an approved `cdp-cdtask/v1` package that must be saved for deferred execution,
 * a stable manual requirement document, PRD, technical proposal, or implementation plan that must be reviewed and split into tasks.
+
+The `cdf-cdtask/v1` and `cdp-cdtask/v1` contracts, their `Approval-State` fields, and the related handoff structures are internal formats for CDF v0.1 skill coordination. Preserve and validate them as defined below. They are not a public runtime protocol and do not imply runtime, scheduler, or executor capabilities.
 
 The CDF path preserves prior human plan approval and returns executable task definitions to CDF. The standalone CDP path preserves prior scope approval and local deferred-task behavior. The manual path remains a planning artifact until CDP or an equivalent risk and approval workflow authorizes implementation.
 
@@ -41,17 +43,17 @@ The goal is to create a handoff-ready task section that:
 
 This skill does not implement code.
 
-This skill does not invoke CDRunner, Codex, Claude, Grok, or another executor.
+This skill does not invoke an executor.
 
 This skill describes dependency and conflict facts but does not schedule tasks or decide whether execution is sequential, parallel, or mixed.
 
-This skill does not perform independent implementation review; that belongs to CDReview in CDF-managed flows.
+This skill does not perform independent implementation review.
 
 This skill does not create a full lightweight spec system.
 
 This skill prepares task breakdown and handoff sections that can be returned in chat, appended to an existing requirement document, or saved as a designated local task document.
 
-It directly accepts the managed `cdf-cdtask/v1` contract from CDF and the existing `cdp-cdtask/v1` handoff contract produced when a user chooses `Approve and save as local task` / `同意并保存为本地 task` at a standalone CDP approval gate.
+It directly accepts the managed `cdf-cdtask/v1` contract from CDF and the existing `cdp-cdtask/v1` handoff contract produced when a user chooses `Save as CDTask` / `同意并保存为本地 task` at a standalone CDP approval gate.
 
 ---
 
@@ -68,6 +70,14 @@ The output is not complete until the Task Readiness Gate passes.
 ---
 
 # Responsibility Boundary
+
+CDTask v0.1 is responsible for:
+
+* converting approved plans into scoped task definitions,
+* preserving approved scope and explicit non-goals,
+* defining dependencies and bounded write areas,
+* defining acceptance criteria and verification requirements,
+* preparing executor handoff information.
 
 This skill may:
 
@@ -91,9 +101,10 @@ This skill must not:
 
 * implement code,
 * modify source code, schemas, migrations, runtime configuration, generated files, tests, or other implementation files,
-* invoke CDRunner, Codex, Claude, Grok, or another executor,
+* invoke an executor,
 * manage executor processes, sessions, or runtime statuses,
 * schedule tasks or decide the final sequential/parallel/mixed execution strategy,
+* manage the development lifecycle or CDF flow,
 * execute implementation verification,
 * perform independent implementation code review, run the fix loop, or declare final lifecycle completion,
 * plan requirements, redesign approved architecture, or define CDF approval policy and flow transitions outside `TASKING`,
@@ -104,7 +115,22 @@ This skill must not:
 * include non-goals as current tasks,
 * mark a document as ready when unresolved ambiguity or conflict remains.
 
-CDP owns planning. CDF owns approval policy, flow transitions, scheduling, and lifecycle continuation. CDRunner owns managed execution and verification execution. CDReview owns independent implementation review. In managed mode, CDTask stops after producing task definitions that pass the Task Readiness Gate and returning them to CDF.
+CDP owns planning and the Next Action decision. CDF owns flow coordination, human decision points, and component handoff. Execution, scheduling, runtime management, and implementation review are outside CDTask v0.1. In managed mode, CDTask stops after producing task definitions that pass the Task Readiness Gate and returning them to CDF.
+
+---
+
+# Optional Role in the Flow
+
+CDTask is optional. Not every CDP plan must become a CDTask.
+
+Use CDTask when:
+
+* work needs a durable task record,
+* work will be resumed later,
+* work needs explicit task decomposition or dependency metadata,
+* execution should be separated from planning.
+
+In standalone CDP, the user may choose `Execute Now` instead and bypass CDTask. Create or persist task definitions only when the selected path, input contract, or explicit user request requires it. Readiness alone never authorizes execution.
 
 ---
 
@@ -231,6 +257,8 @@ Source-Commit: <commit or Unavailable>
 ## Approval Record
 ...
 ```
+
+Within this internal handoff format, `Execution-Owner: cdf` records the component that receives control after task definition. It does not mean that CDF or CDTask executes code, and it does not define a runtime executor.
 
 ## Managed Field Requirements
 
@@ -380,7 +408,7 @@ Requirement Readiness Check
   -> Return To CDF (CDF managed) OR Finish Standalone/Manual Path
 ```
 
-The Task Readiness Gate is mandatory. It is the canonical name for the task-definition quality gate formerly called the Final Review Gate; it is not CDReview and does not inspect implementation code.
+The Task Readiness Gate is mandatory. It is the canonical name for the task-definition quality gate formerly called the Final Review Gate; it is not implementation review and does not inspect implementation code.
 
 When reading an existing standalone/manual task document, accept the legacy `Final Review Gate` heading as the same compatibility gate. New output must use `Task Readiness Gate`.
 
@@ -570,7 +598,7 @@ Managed dependency rules:
 
 ## Parallelism Boundary
 
-CDTask supplies `Dependencies`, `Write Scope`, `Shared Contracts`, and `Risk`. CDF decides whether execution is `SEQUENTIAL`, `PARALLEL`, or `MIXED`.
+CDTask supplies `Dependencies`, `Write Scope`, `Shared Contracts`, and `Risk`. CDTask does not decide whether later execution is `SEQUENTIAL`, `PARALLEL`, or `MIXED`; that decision belongs to the execution process outside CDTask v0.1.
 
 Parallel eligibility requires CDF to evaluate at least:
 
@@ -582,7 +610,7 @@ AND
 No conflicting shared contract
 ```
 
-CDTask must produce accurate metadata for this decision but must not make the final scheduling or parallelism decision.
+CDTask must produce accurate metadata for a later execution decision but must not schedule or select parallelism.
 
 ---
 
@@ -685,7 +713,7 @@ Managed field rules:
 * `Shared Contracts`: list API contracts, database schema, shared types, state models, shared configuration, common interfaces, generated contracts, or protocol definitions. Write `None` only when evidence supports no shared contract; never omit the field.
 * `Risk`: inherit the approved Plan risk unless a narrower task-specific risk is known. Never silently downgrade a higher-risk approved Plan in a way that weakens controls.
 * `Status`: keep tasks as draft definitions until the Task Readiness Gate passes. Set every managed task to `READY` only after the gate returns `READY`.
-* Do not use runtime statuses such as `RUNNING`, `COMPLETED`, or `FAILED`; CDF/CDRunner own runtime lifecycle state.
+* Do not use runtime statuses such as `RUNNING`, `COMPLETED`, or `FAILED`; runtime lifecycle state is outside CDTask v0.1.
 
 ## Task Design Rules
 
@@ -744,7 +772,7 @@ For managed mode, also include checks that every task has stable Dependencies, a
 
 # Phase 6: Codex Handoff Rules
 
-Preserve this compatibility protocol for standalone CDP and manual paths when the user intends to give the document to Codex or another coding agent. Do not use it as the CDF managed contract.
+Preserve this compatibility handoff format for standalone CDP and manual paths when the user intends to give the document to Codex or another coding agent. Do not use it as the CDF managed contract.
 
 This section is not an instruction for the assistant to execute code.
 
@@ -807,7 +835,7 @@ For `cdf-cdtask/v1`, produce an executor-neutral section with this heading:
 # Execution Contract
 ```
 
-This contract defines constraints for a future executor assignment. CDTask produces it; CDRunner enforces it and manages execution. It is not authorization for CDTask to invoke an executor.
+This contract prepares constraints for a separately authorized executor handoff. CDTask produces the handoff information but does not enforce it, manage execution, or invoke an executor.
 
 Use this minimum contract:
 
@@ -830,7 +858,7 @@ Use this minimum contract:
 
 Add plan-specific constraints where needed. Keep the language executor-neutral: the executor may be Codex, Grok, Claude, or another coding agent selected by CDF.
 
-The managed executor may self-check its assigned work and report verification evidence. Do not assign final independent implementation review or the fix loop to the executor; CDReview owns independent implementation review after CDRunner execution and verification.
+An authorized executor may later self-check its assigned work and report verification evidence. Independent implementation review and any fix loop remain outside CDTask v0.1.
 
 ---
 
@@ -838,7 +866,7 @@ The managed executor may self-check its assigned work and report verification ev
 
 After appending the task breakdown, scope guard checklist, and applicable handoff contract, review the entire resulting document from a task-definition quality perspective.
 
-This gate is mandatory. It checks task definitions, not implementation code, and must not be confused with CDReview.
+This gate is mandatory. It checks task definitions, not implementation code, and must not be confused with implementation review.
 
 The assistant must check whether the final document contains:
 
@@ -906,7 +934,7 @@ Ready for task handoff / Not ready yet / Blocked; return to CDF
 
 Use the managed outcomes precisely:
 
-* `READY`: task definitions pass the gate and may return to CDF as `READY_TO_EXECUTE` candidates. Only after this verdict may managed tasks use `Status: READY`.
+* `READY`: task definitions pass the gate and may return to CDF as handoff-ready task definitions. Only after this verdict may managed tasks use `Status: READY`.
 * `NOT_READY`: CDTask can repair task-definition defects inside the approved scope, then rerun the gate.
 * `BLOCKED`: the approved Plan is missing, conflicting, or invalid; an implementation-affecting decision or assumption is missing; or repair would require replanning or new approval. Return the gap or conflict to CDF; do not guess, choose a default, silently normalize it, or independently replan.
 
@@ -1075,7 +1103,7 @@ created_at: YYYY-MM-DDTHH:mm:ssZ
 
 Use the approved managed risk level. Do not use `ready_for_resume`, do not add a standalone CDP resume command, and do not transfer execution ownership away from CDF.
 
-`Tasking Status: READY`, persisted artifact `status: tasking_ready`, and CDF lifecycle state `READY_TO_EXECUTE` are distinct concepts and must not be treated as interchangeable. CDTask produces the readiness verdict and may persist the artifact state; only CDF evaluates and enters the lifecycle state.
+`Tasking Status: READY` and persisted artifact `status: tasking_ready` are task-definition concepts, not runtime execution states. CDTask produces the readiness verdict and may persist the artifact state; it does not enter an execution lifecycle state.
 
 For `source: cdp` and `source: manual`, use this document order after the frontmatter:
 
@@ -1293,7 +1321,7 @@ Task Count: N
 Next Owner: CDF
 ```
 
-plus Scope Lock, Dependency Graph, Dependency Data, managed Tasks, Execution Contract, and Task Readiness Result. CDTask stops there; it does not invoke CDRunner, an executor, verification execution, or CDReview.
+plus Scope Lock, Dependency Graph, Dependency Data, managed Tasks, Execution Contract, and Task Readiness Result. CDTask stops there; it does not invoke an executor, perform implementation verification, or perform implementation review.
 
 When persistence occurred, report the saved path, source, status, and applicable next action.
 
@@ -1521,7 +1549,7 @@ Process:
 7. If `BLOCKED`, return the blocking Plan conflict or missing authority to CDF without replanning.
 8. If `READY`, set every task to `Status: READY` and return the structured result to CDF.
 9. Save a managed task document only when CDF or the user explicitly requests persistence, then run Save Verification.
-10. Stop before execution. Do not invoke CDRunner or any executor.
+10. Stop before execution. Do not invoke an executor.
 
 If any missing information would introduce a new implementation decision or materially affect behavior, scope, architecture, contracts, acceptance, verification, risk, product behavior, or implementation direction, use `BLOCKED` at step 7. Do not supply a conservative default in managed mode.
 
@@ -1558,7 +1586,7 @@ Next Owner: CDF
 
 For `NOT_READY` or `BLOCKED`, replace the status and report exact readiness defects or approved-Plan conflicts. Do not mark draft tasks `READY` and do not cross into `EXECUTING`.
 
-`Tasking Status: READY` means the task definitions are candidates for CDF's `TASKING → READY_TO_EXECUTE` transition. CDTask does not perform that transition or choose the execution strategy.
+`Tasking Status: READY` means the task definitions are ready to return to CDF for handoff. It is not execution authorization, and CDTask does not choose the execution strategy.
 
 ---
 
@@ -1668,8 +1696,8 @@ Use this checklist during the Requirement Readiness Check and Task Readiness Gat
 - [ ] Every task has Dependencies, Write Scope, Shared Contracts, Risk, and draft/READY status.
 - [ ] Dependency data is acyclic and supports DAG branches and joins.
 - [ ] The Execution Contract is executor-neutral.
-- [ ] CDF, not CDTask, owns scheduling and lifecycle continuation.
-- [ ] CDReview, not the executor, owns independent implementation review.
+- [ ] CDTask does not own scheduling or lifecycle continuation.
+- [ ] Independent implementation review is outside CDTask and the task-definition gate.
 ```
 
 ---
@@ -1752,7 +1780,7 @@ If the user asks to append to an existing document, output only the appended sec
 When using this skill:
 
 1. Do not implement code.
-2. Do not invoke CDRunner, Codex, Claude, Grok, or another executor.
+2. Do not invoke an executor.
 3. Do not claim an executor ran anything.
 4. Do not claim the handoff task breakdown is ready until the Task Readiness Gate passes.
 5. Always review the final appended sections for task-definition quality.
@@ -1771,10 +1799,10 @@ When using this skill:
 18. Modify only the designated task document when local saving is requested; do not modify implementation files.
 19. Do not claim a local task was saved until Save Verification passes.
 20. Never label manual input as `source: cdp` or `source: cdf`, or copy either approval state into it.
-21. Treat `Tasking Status: READY`, artifact `status: tasking_ready`, and CDF lifecycle `READY_TO_EXECUTE` as distinct concepts.
+21. Treat `Tasking Status: READY` and artifact `status: tasking_ready` as task-definition readiness, not runtime execution state.
 22. Treat "ready for handoff", `ready_for_resume`, `ready_for_review`, and `tasking_ready` as distinct states.
 23. Do not decide scheduling or final sequential/parallel/mixed execution strategy.
-24. Do not assign independent final implementation review to a managed executor; CDReview owns it.
+24. Do not assign independent final implementation review as a CDTask responsibility.
 25. Stop managed flow before `EXECUTING` and return it to CDF.
 26. End with the current status:
 

@@ -23,7 +23,7 @@ Create Plan
 Choose Next Action
 ```
 
-After producing the plan, use the resolved Execution Context to decide what happens next. In `standalone`, CDP may execute the approved plan directly or save it through CDTask. In `cdf-managed`, CDP returns the approved plan package to CDF and does not continue the lifecycle.
+After producing the plan, use the resolved Execution Context to present the valid next action and wait for the applicable approval and explicit user choice. In `standalone`, CDP may then execute the approved plan directly or save it through CDTask. In `cdf-managed`, CDP returns the approved plan package to CDF and does not continue the lifecycle.
 
 Core principle:
 
@@ -42,11 +42,25 @@ Resolve the execution context before following the workflow. Use explicit callin
 - Otherwise default to `standalone`. A direct `/cdp` invocation is standalone by default.
 - Do not infer `cdf-managed` merely because the `cdf` skill is installed or discoverable.
 
-The ownership invariant is:
+### `standalone`
 
-> In standalone mode, CDP owns planning and the next-action decision. After the required approval gate, it may execute directly or save the approved work through CDTask for later execution.
+CDP must:
 
-> In cdf-managed mode, CDP owns planning only. After approval, it returns an Approved Plan Package to CDF; CDF owns lifecycle continuation, and execution remains outside CDP.
+- analyze the requirement and evidence;
+- classify risk and create the Development Plan;
+- recommend `Execute Now` or `Save as CDTask`;
+- wait for the applicable approval and explicit user choice;
+- after approval, execute directly or save through CDTask according to that choice.
+
+### `cdf-managed`
+
+CDP must:
+
+- analyze the requirement and evidence;
+- classify risk and create the Development Plan;
+- obtain the required human plan approval;
+- return the Approved Plan Package to CDF;
+- stop without continuing the lifecycle, calling CDTask, or executing code.
 
 In `cdf-managed`, CDP may inspect the workspace and produce planning artifacts, but it must not modify implementation files, perform feature implementation, enter the standalone implementation workflow, call CDTask, create a local task, or treat plan approval as authorization for CDP to write code. After plan approval, return the Approved Plan Package to CDF before any transition into `TASKING`. Risk level still controls planning depth, evidence depth, approval strictness, design depth, and phase requirements; it never authorizes CDP execution.
 
@@ -65,6 +79,7 @@ CDP does not own:
 
 - CDF lifecycle management;
 - replacement of CDF or CDTask responsibilities;
+- lifecycle orchestration or scheduling;
 - execution-state-machine design;
 - runtime orchestration.
 
@@ -89,7 +104,7 @@ If the requirement is unclear, output the clarification response from that refer
 7. Inspect code evidence appropriate to the risk.
 8. Finalize or upgrade the risk level; the stricter rule always wins.
 9. Create the Development Plan using the required output structure and the matching risk workflow.
-10. Decide the context-valid next action. In `standalone`, choose between direct execution and CDTask handoff. In `cdf-managed`, stop after plan approval and return the Approved Plan Package to CDF before `TASKING`.
+10. Present the context-valid next action and wait for the applicable approval and explicit user choice. In `standalone`, the user chooses between direct execution and CDTask handoff. In `cdf-managed`, the user approves returning the Approved Plan Package to CDF; then stop before `TASKING`.
 
 If the task is urgent or described as a hotfix, keep the analysis compact, but do not bypass Level L or Level XL approval gates for high-risk areas.
 
@@ -237,9 +252,11 @@ Choose one:
 2. Save as CDTask
 ```
 
+`Next Action` is a user decision point. CDP must not automatically transition from planning into implementation or task persistence. A recommendation is not authorization: wait for the applicable approval and the user's explicit choice before executing code or creating a CDTask.
+
 Apply the `Next Action` section by Execution Context:
 
-- In `standalone`, recommend one of the two actions and explain the decision briefly. `Execute Now` maps to the context-appropriate direct implementation path. `Save as CDTask` maps to the approved deferred-task handoff path. Do not execute or save until the applicable approval rule permits it.
+- In `standalone`, recommend one of the two actions and explain the decision briefly, then wait for the user to choose. `Execute Now` maps to the context-appropriate direct implementation path. `Save as CDTask` maps to the approved deferred-task handoff path. Do not execute or save until the applicable approval rule permits it and the user explicitly selects that action.
 - In `cdf-managed`, do not offer either standalone action. Replace the choice with `Return Approved Plan Package to CDF`. Before approval, mark it as awaiting approval; after approval, return the package to CDF and stop.
 
 The Approved Plan Package is the approved form of the Development Plan. It must preserve requirement understanding, confirmed evidence and assumptions, scope, technical approach, risk level, risks, acceptance criteria, verification strategy, applicable design or phase boundaries, rollback plan, approval record, and available workspace metadata. CDF may pass this package to CDTask; CDP must not invoke CDTask in `cdf-managed`.
@@ -292,7 +309,7 @@ Use Level S for simple, low-risk changes:
 Rules:
 
 - Show concise Requirement Understanding, Requirement Decomposition, and Risk Classification before editing.
-- In `standalone`, use a compact Development Plan Output, select `Execute Now`, edit directly, and do not ask for confirmation.
+- In `standalone`, use a compact Development Plan Output, recommend `Execute Now`, and wait for the user's explicit Next Action choice before editing.
 - In `cdf-managed`, do not edit. Produce a lightweight plan with scope, acceptance criteria, and verification strategy, then request `Approve plan and continue CDF flow` / `批准计划并继续 CDF 流程`.
 - Do not create a long plan.
 - Keep the change minimal.
@@ -317,7 +334,7 @@ Rules:
 
 - After target, requirement, decomposition, classification, and evidence checks, provide a short evidence-backed plan first.
 - Use the Development Plan Output structure and include Requirement Understanding and Requirement Decomposition in the visible compact plan.
-- In `standalone`, if the requirement is clear and low-risk, proceed without waiting for confirmation.
+- In `standalone`, recommend the appropriate Next Action and wait for the user's explicit choice before proceeding.
 - In `cdf-managed`, do not edit. Add concise acceptance criteria and verification strategy, request `Approve plan and continue CDF flow` / `批准计划并继续 CDF 流程`, then return the Approved Plan Package to CDF.
 - Ask only when the requirement is ambiguous.
 - Before classifying a task as Level M, confirm that it does not touch any Level L high-risk area. If it does, upgrade it to Level L, produce the full Level L approval template using the evidence already gathered, and wait for approval before editing.
@@ -355,7 +372,7 @@ Risk Level: Level M
 
 ## Next Action
 
-Standalone: `Execute Now`. Proceed because this is scoped and does not touch high-risk areas.
+Standalone recommendation: `Execute Now`, because this is scoped and does not touch high-risk areas. Wait for the user's explicit choice before proceeding.
 
 CDF-managed: `Return Approved Plan Package to CDF`, pending `Approve plan and continue CDF flow` / `批准计划并继续 CDF 流程`. This approves the plan and scope for CDF continuation; it does not authorize CDP implementation.
 ```
@@ -536,9 +553,9 @@ In `cdf-managed`, CDP does not implement. If later managed execution exposes an 
 
 Do not over-plan Level S tasks.
 
-For simple UI, copy, and style changes, do not output long requirement analysis, proposals, design documents, implementation phases, risk matrices, or confirmation requests.
+For simple UI, copy, and style changes, do not output long requirement analysis, proposals, design documents, implementation phases, risk matrices, or approval documents.
 
-In `cdf-managed`, the required plan approval is the only exception to the no-confirmation-request rule. Keep that approval surface concise; do not inflate Level S planning depth.
+The required Next Action decision remains mandatory. Keep the Level S decision surface concise in both execution contexts; do not inflate planning depth.
 
 Requirement understanding and decomposition may be one concise line when the task is simple.
 
@@ -575,7 +592,7 @@ Recommend `Save as CDTask` in `standalone` when one or more of these conditions 
 - execution should be separated from planning;
 - another agent or multiple contributors need a bounded task definition.
 
-Recommend `Execute Now` when the work is scoped for the current session, the relevant approval rule permits implementation, and persistence or execution separation adds no meaningful value.
+Recommend `Execute Now` when the work is scoped for the current session, the relevant approval rule permits implementation, and persistence or execution separation adds no meaningful value. Do not act on the recommendation until the user chooses it.
 
 The recommendation does not itself authorize execution or task creation. Wait for the context-appropriate approval when required. For `Save as CDTask`, follow the standalone CDTask availability, eligibility, approval, and `cdp-cdtask/v1` handoff rules below; do not invent a new handoff format.
 
@@ -720,7 +737,7 @@ The contract version and heading names are part of the standalone CDP-to-CDTask 
 
 Apply confirmation according to Execution Context:
 
-- In `standalone`, for Level L and Level XL tasks, do not modify code until the user gives explicit implementation approval.
+- In `standalone`, every risk level requires an explicit Next Action choice before CDP transitions from planning into implementation or task persistence. Level L and Level XL additionally require approval of the displayed high-risk scope or current phase.
 - In `cdf-managed`, every risk level requires explicit plan/scope approval before returning the Approved Plan Package to CDF, but no approval authorizes CDP to modify implementation files or enter `TASKING`.
 
 Strong standalone implementation approval examples:
@@ -768,7 +785,7 @@ If the user gives partial or conditional approval, update the scope, risks, and 
 
 When resuming a standalone local task with `Contract-Version: cdp-cdtask/v1`, a clear request such as `Continue local task: <path>` or `继续执行本地 task：<path>` is implementation authorization for the saved scope only after the required target, evidence, branch, and commit re-checks pass. Do not request the same approval again when nothing material has changed. If the saved task conflicts with the current workspace or the plan must expand, update the plan and request approval again.
 
-In `standalone`, when the user explicitly hands the saved task to an external coding agent and asks that agent to execute it, the external agent may implement only the saved Task Breakdown and must obey the Scope Guard and Handoff Rules. The task document by itself is not execution authorization. In `cdf-managed`, executor assignment and execution authorization belong to CDF/CDRunner, outside CDP.
+In `standalone`, when the user explicitly hands the saved task to an external coding agent and asks that agent to execute it, the external agent may implement only the saved Task Breakdown and must obey the Scope Guard and Handoff Rules. The task document by itself is not execution authorization. In `cdf-managed`, executor assignment and execution authorization remain outside CDP.
 
 If the user responds to an approval request with a new requirement instead of clear approval, do not treat it as approval and do not edit. Mark the previous approval request as stale, incorporate the new requirement, and rerun target check, requirement understanding, decomposition, evidence inspection, and final risk classification. Then produce an updated Level L approval request or Level XL design request as needed.
 
