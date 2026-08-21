@@ -1,17 +1,17 @@
 ---
 name: cdf
-description: Coordinate a controlled AI development flow from requirement intake through planning approval and task definition. Use when the user invokes cdf, /cdf, $cdf, cdf:, or controlled-development-flow, or when a development request needs explicit planning and human approval before task handoff. CDF does not implement, execute, or review code.
+description: Assess and coordinate a controlled AI development flow through CDP planning, human approval, and CDTask handoff. Use when the user invokes cdf, /cdf, $cdf, cdf:, or controlled-development-flow, or when a development request needs explicit planning and scope control. CDF v0.1 ends at task-definition handoff and does not implement, execute, verify, or review code.
 ---
 
 # CDF: Controlled Development Flow
 
 ## Overview
 
-CDF is the top-level flow-control skill for AI-assisted software development.
+CDF is the top-level flow-coordination skill for AI-assisted software development.
 
 AI can develop quickly, but the development process must remain controlled. CDF reduces uncontrolled behavior by moving work through explicit stages, preserving scope, and requiring a human decision before a plan becomes executable work.
 
-CDF v0.1 coordinates CDP and CDTask. It is not a development runtime and does not perform implementation.
+CDF v0.1 coordinates CDP and CDTask. It is not a runtime or an executor. It ends after producing and handing off the CDTask definition and does not perform implementation, execution, verification, or review.
 
 ## Responsibility
 
@@ -20,15 +20,16 @@ CDF owns:
 - flow coordination;
 - component handoff;
 - human decision points;
-- preservation of the approved direction and scope.
+- approved scope preservation.
 
 CDF does not own:
 
 - requirement analysis or technical planning, which belong to CDP;
 - detailed task decomposition, which belongs to CDTask;
-- implementation or code changes;
-- code execution or verification;
-- code review.
+- implementation;
+- execution;
+- verification;
+- review.
 
 ## Workflow
 
@@ -37,20 +38,20 @@ Follow this flow:
 ```text
 Requirement
     ↓
-CDF
+CDF Assessment
     ↓
-CDP
+CDP Planning
     ↓
-Plan Review
+Human Plan Approval
     ↓
 CDTask
     ↓
 Execution (outside CDF v0.1)
 ```
 
-1. Receive the development requirement.
-2. Decide whether the request should enter the controlled flow. Use CDF when the work requires development planning, scope control, or an explicit plan decision. For simple informational questions or requests that do not require development planning, do not force CDF.
-3. Send the requirement and available context to CDP.
+1. Receive and assess the development requirement.
+2. Decide whether the request should enter the controlled flow. Use CDF when the work requires development planning, scope control, or an explicit plan decision. For simple informational questions or requests that do not require development planning, stop the CDF flow and handle or route the request normally.
+3. If the request enters the flow, send the requirement and available context to CDP.
 4. Present CDP's plan to the user and wait for explicit approval.
 5. If the user requests changes, return the feedback to CDP and present the revised plan for approval.
 6. After approval, send the approved plan to CDTask.
@@ -113,14 +114,16 @@ Do not treat silence, partial feedback, or approval of only one section as appro
 
 ## Future Extensions
 
-The following are possible future capabilities, not CDF v0.1 behavior:
+These extensions are not CDF v0.1 capabilities. Do not invoke, simulate, or depend on them in the v0.1 flow.
+
+### Near Future
 
 - CDRunner for managed implementation and execution;
 - CDReview for implementation review;
-- CDF Runtime, including runtime control or state-machine execution;
+
+### Long Term
+
+- CDF Runtime;
 - Protocol Schema for structured component contracts;
-- execution and verification gates;
 - event-driven coordination;
 - CLI support.
-
-Do not invoke, simulate, or depend on these extensions in the v0.1 flow.
