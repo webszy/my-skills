@@ -241,7 +241,7 @@ Agent 行为：
 CDP 会在生成交接包或创建本地文件之前检查 CDTask 是否可用。如果 CDTask 不可用，CDP 不创建 `_cdtask`、不保存降级文档，也不自动安装，只输出：
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_task -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
 ```
 
 安装完成后，用户需要再次选择 `Approve and save as local task` / `同意并保存为本地 task`。
@@ -264,17 +264,17 @@ npx skills add https://github.com/webszy/my-skills --skill cd_task -a codex -a c
 安装到 Codex：
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -g -y
 ```
 
 安装到 Claude Code：
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a claude-code -g -y
 ```
 
 同时安装到 Codex 和 Claude Code：
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
 ```

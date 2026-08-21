@@ -22,24 +22,24 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 
 `cdp` provides evidence-based, risk-aware planning with standalone and CDF-managed workflows.
 
-Read the full guide: [skills/cdp/README.md](skills/cd_planner/README.md)
+Read the full guide: [skills/cdp/README.md](skills/cdp/README.md)
 
 Repository metadata: [skill.json](skill.json)
 
-Skill metadata: [skills/cdp/skill.json](skills/cd_planner/skill.json)
+Skill metadata: [skills/cdp/skill.json](skills/cdp/skill.json)
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
 ```
 
 ## cdtask
 
 `cdtask` turns stable requirements, approved standalone CDP handoffs, or CDF-managed approved plans into scoped, dependency-aware, verifiable execution units. It can optionally persist tasks, but it does not implement or schedule code itself.
 
-Read the full guide: [skills/cdtask/SKILL.md](skills/cd_task/SKILL.md)
+Read the full guide: [skills/cdtask/SKILL.md](skills/cdtask/SKILL.md)
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_task -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
 ```
 
 ## app-analytics-audit-flow

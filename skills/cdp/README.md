@@ -243,7 +243,7 @@ The deferred outcome does not authorize implementation changes in the current tu
 CDP checks that CDTask is available before generating the handoff package or creating local files. If CDTask is unavailable, CDP does not create `_cdtask`, does not save a fallback document, and does not install anything automatically. It outputs:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_task -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
 ```
 
 After installation, the user chooses `Approve and save as local task` again.
@@ -266,17 +266,17 @@ For Level L and Level XL, final responses should include a structured Traceabili
 Install for Codex:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -g -y
 ```
 
 Install for Claude Code:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a claude-code -g -y
 ```
 
 Install for both:
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
 ```

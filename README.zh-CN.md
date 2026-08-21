@@ -22,24 +22,24 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 
 `cdp` 是 `controlled-development-planning` 的简称，提供基于证据、风险感知的 standalone 与 CDF-managed 开发规划工作流。
 
-查看完整说明：[skills/cdp/README.zh-CN.md](skills/cd_planner/README.zh-CN.md)
+查看完整说明：[skills/cdp/README.zh-CN.md](skills/cdp/README.zh-CN.md)
 
 合集元数据：[skill.json](skill.json)
 
-Skill 元数据：[skills/cdp/skill.json](skills/cd_planner/skill.json)
+Skill 元数据：[skills/cdp/skill.json](skills/cdp/skill.json)
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_planner -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
 ```
 
 # cdtask
 
 `cdtask` 将稳定需求、已批准的 standalone CDP 交接包或 CDF-managed approved Plan，转化为边界清晰、依赖明确、可验证的执行单元。它可以按需持久化任务，但自身不实现或调度代码。
 
-查看完整说明：[skills/cdtask/SKILL.md](skills/cd_task/SKILL.md)
+查看完整说明：[skills/cdtask/SKILL.md](skills/cdtask/SKILL.md)
 
 ```bash
-npx skills add https://github.com/webszy/my-skills --skill cd_task -a codex -a claude-code -g -y
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
 ```
 
 # app-analytics-audit-flow

@@ -1,5 +1,5 @@
 ---
-name: cd_task
+name: cdtask
 description: Use this skill when CDF provides an approved planning result for managed tasking, or when the user wants to split an existing requirement document, PRD, technical proposal, implementation plan, or approved standalone CDP handoff package into scoped, dependency-aware, verifiable execution units. It may optionally persist designated task documents, but it does not implement source code, invoke executors, schedule tasks, or perform implementation review.
 ---
 
@@ -1024,9 +1024,9 @@ For a validated CDP package, save the reviewed task document with this frontmatt
 
 ```yaml
 ---
-task_contract: cd_planner-cd_task/v1
+task_contract: cdp-cdtask/v1
 status: ready_for_resume
-source: cd_planner
+source: cdp
 approval_state: scope-approved-execution-deferred
 risk_level: Level L
 workspace: /absolute/workspace/path
@@ -1042,10 +1042,10 @@ For a manual input saved locally, use this distinct frontmatter:
 
 ```yaml
 ---
-task_contract: cd_task/v1
+task_contract: cdtask/v1
 status: ready_for_review
 source: manual
-approval_state: not-approved-by-cd_planner
+approval_state: not-approved-by-cdp
 risk_level: Unclassified
 workspace: /absolute/workspace/path
 source_branch: branch-or-Unavailable
@@ -1060,7 +1060,7 @@ For a managed CDF input saved only on explicit request, use this distinct frontm
 
 ```yaml
 ---
-task_contract: cdf-cd_task/v1
+task_contract: cdf-cdtask/v1
 status: tasking_ready
 source: cdf
 approval_state: plan-approved
