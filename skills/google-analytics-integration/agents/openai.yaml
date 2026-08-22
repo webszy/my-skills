@@ -1,0 +1,4 @@
+interface:
+  display_name: "Google Analytics Integration"
+  short_description: "Framework-aware GA4 integration"
+  default_prompt: "Use $google-analytics-integration to inspect this project and add a minimal Google Analytics 4 integration."
