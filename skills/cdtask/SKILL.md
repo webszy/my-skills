@@ -104,6 +104,7 @@ Source-Commit: <commit or Unavailable>
 The package must also contain:
 
 - canonical `cdp-scope/v1` Scope Lock;
+- `Change Scope`, the readable projection of `will_change` and `will_not_change`;
 - requirement understanding and decomposition;
 - confirmed evidence and open assumptions;
 - technical approach or proposed design;
@@ -216,6 +217,7 @@ Validate the contract before decomposing tasks:
 - `in_scope` maps only to approved plan outcomes;
 - `out_of_scope`, `non_goals`, and `will_not_change` remain explicit constraints;
 - `will_change` contains no unapproved affected area;
+- every readable projection, including `Change Scope`, plan prose, and phase boundaries, matches the canonical block;
 - high-level acceptance criteria match approved outcomes;
 - assumptions and stop conditions are actionable;
 - risk and phase metadata do not contradict the plan.
@@ -238,33 +240,9 @@ If tasking introduces an unapproved impact surface, report `BLOCKED` and return 
 
 ### 4. Dependency Analysis
 
-For manual or CDP-deferred input, a linear order is acceptable only when dependencies are truly linear:
-
-```markdown
-## Dependency Order
-1. <task or prerequisite>
-2. <dependent task>
-
-### Dependency Notes
-- <why the dependency exists>
-```
-
-For CDF-managed input, use stable IDs and a directed acyclic graph:
-
-```markdown
-## Dependency Graph
-- TASK-001 -> TASK-003
-- TASK-002 -> TASK-003
-
-## Dependency Data
-| Task ID | Depends On | Reason |
-|---|---|---|
-| TASK-001 | none | <reason> |
-| TASK-002 | none | <reason> |
-| TASK-003 | TASK-001, TASK-002 | <reason> |
-```
-
 Describe only dependency constraints. Do not schedule work, assign workers, choose parallel execution, or claim runtime coordination.
+
+Use the dependency format for the selected input route from [references/task-templates.md](references/task-templates.md): a linear `Dependency Order` for manual or CDP-deferred input when dependencies are truly linear, or a stable-ID `Dependency Graph` with `Dependency Data` for CDF-managed input.
 
 A cycle caused only by task-definition structure is `NOT_READY`; repair it inside approved scope. A cycle revealing a plan contradiction is `BLOCKED` and returns to the source owner.
 
@@ -272,71 +250,7 @@ A cycle caused only by task-definition structure is `NOT_READY`; repair it insid
 
 Use the smallest independently verifiable tasks that preserve implementation meaning.
 
-For manual or CDP-deferred input:
-
-```markdown
-## Task N: <Task Name>
-
-### Goal
-<one outcome>
-
-### Dependency
-<task or prerequisite>
-
-### Files Likely Touched
-- <path or area>
-
-### Implementation Notes
-- <approved constraints and direction>
-
-### Acceptance Criteria
-- <observable result>
-
-### Must Not Change
-- <protected behavior or area>
-
-### Verification
-- <check>
-```
-
-For CDF-managed input:
-
-```markdown
-## TASK-001: <Task Name>
-
-### Goal
-<one outcome>
-
-### Dependencies
-- <stable task ID or none>
-
-### Scope
-- <verbatim mapping to approved scope>
-
-### Write Scope
-- <allowed path or area>
-
-### Shared Contracts
-- <interface or invariant>
-
-### Implementation Notes
-- <approved constraints and direction>
-
-### Acceptance Criteria
-- <observable result>
-
-### Must Not Change
-- <protected behavior or area>
-
-### Verification
-- <check>
-
-### Risk
-<S|M|L|XL and task-specific note>
-
-### Status
-<DRAFT|READY>
-```
+Read the task format for the selected input route in [references/task-templates.md](references/task-templates.md) before writing tasks, and keep every field it requires.
 
 `DRAFT` and `READY` are definition states only. Do not add runtime states such as assigned, running, retrying, or completed.
 
@@ -368,30 +282,7 @@ Any failed item must be resolved through the Task Readiness Gate.
 
 ### 7. Handoff Information
 
-For manual or CDP-deferred output, provide text rules for a future authorized coding agent:
-
-```markdown
-## Codex Handoff Rules
-- Work only inside the canonical Scope Lock.
-- Treat non-goals and Must Not Change as hard constraints.
-- Respect dependencies and stop conditions.
-- Stop and request replanning if scope must expand.
-- Verify each task against its acceptance criteria.
-- Do not infer execution authorization from task readiness.
-```
-
-For CDF-managed output, provide an executor-neutral contract:
-
-```markdown
-## Execution Contract
-- Lifecycle Owner: CDF
-- Approval State: plan-approved
-- Allowed Work: <verbatim approved scope mapping>
-- Prohibited Work: <verbatim exclusions and non-goals>
-- Stop Conditions: <verbatim stop conditions>
-- Required Verification: <task verification obligations>
-- Scope Expansion Path: return to CDP through CDF for replanning and approval
-```
+Produce the handoff text for the selected route from [references/task-templates.md](references/task-templates.md): `Codex Handoff Rules` for manual or CDP-deferred output, or an executor-neutral `Execution Contract` for CDF-managed output.
 
 These sections are handoff text only. CDTask does not select, invoke, monitor, or review an executor.
 
@@ -448,6 +339,7 @@ Examples of `BLOCKED`:
 
 - missing or invalid approval;
 - missing or contradictory canonical Scope Lock;
+- a readable projection that contradicts the canonical Scope Lock;
 - implementation-affecting ambiguity in a managed package;
 - tasking would require new scope, architecture, behavior, or acceptance criteria;
 - partial-approval remainder cannot be separated safely.
@@ -462,79 +354,9 @@ Persist only when requested or required by the selected handoff path. Never sile
 
 Resolve relative paths against `Workspace`. Do not overwrite silently: suffix a colliding default name, and ask before replacing an explicit path. Create only the required parent directory and modify no implementation file.
 
-After saving, read the file back and verify metadata, workspace/source traceability, canonical Scope Lock, Approval Record, required sections, tasks, Scope Guard, Task Readiness Gate, and destination-specific resume/return rules. Do not claim success if verification fails.
+Read [references/persistence.md](references/persistence.md) before writing a file. It holds the route-specific document contract — frontmatter, required sections, and the save-verification checklist — for CDP deferred, manual, and CDF-managed output. Managed persistence occurs only when requested by CDF or the user.
 
-### CDP Deferred Task File
-
-```yaml
----
-task_contract: cdp-cdtask/v1
-status: ready_for_resume
-source: cdp
-approval_state: scope-approved-execution-deferred
-risk_level: <Level S | Level M | Level L | Level XL>
-workspace: <absolute path>
-source_branch: <branch or Unavailable>
-source_commit: <commit or Unavailable>
-created_at: <ISO-8601 timestamp>
----
-```
-
-Required sections:
-
-1. Resume Contract;
-2. Approval Record;
-3. planning evidence and approved design;
-4. canonical Scope Lock, verbatim;
-5. dependency order and task breakdown;
-6. risks, acceptance criteria, verification, and rollback;
-7. handoff paths, Scope Guard, Codex Handoff Rules, and Task Readiness Gate.
-
-### Manual Task File
-
-```yaml
----
-task_contract: cdtask/v1
-status: ready_for_review
-source: manual
-approval_state: not-approved-by-cdp
-risk_level: Unclassified
-workspace: <absolute path>
-source_branch: <branch or Unavailable>
-source_commit: <commit or Unavailable>
-created_at: <ISO-8601 timestamp>
----
-```
-
-The document must state that it requires user review or CDP planning before any execution authorization.
-
-### CDF-Managed Task File
-
-```yaml
----
-task_contract: cdf-cdtask/v1
-status: tasking_ready
-source: cdf
-approval_state: plan-approved
-execution_owner: cdf
-risk_level: <Level S | Level M | Level L | Level XL>
-workspace: <absolute path>
-source_branch: <branch or Unavailable>
-source_commit: <commit or Unavailable>
-created_at: <ISO-8601 timestamp>
----
-```
-
-Required sections:
-
-1. CDF Continuation Contract and Approval Record;
-2. planning evidence and approved design;
-3. canonical Scope Lock, verbatim;
-4. dependency graph/data and stable-ID tasks;
-5. risks, acceptance criteria, verification, and rollback;
-6. Scope Guard, Execution Contract, Task Readiness Gate, and Save Verification.
-
-Managed persistence occurs only when requested by CDF or the user.
+After saving, read the file back and verify it against that contract. Do not claim success if verification fails.
 
 Treat `READY`, `ready_for_resume`, `ready_for_review`, and `tasking_ready` as distinct task-definition states. Do not reinterpret them as runtime execution states.
 
@@ -553,10 +375,21 @@ For managed return, end with the current status and ownership:
 ```text
 Tasking Status: <READY | NOT_READY | BLOCKED>
 Contract-Version: cdf-cdtask/v1
+Blocked-Reason-Class: <approval | scope-lock | requires-new-scope | ambiguity | partial-remainder | Not applicable>
 Execution Owner: CDF
 Task Count: <N when available>
 Next Owner: CDF
 ```
+
+`Blocked-Reason-Class` is required when the status is `BLOCKED` and `Not applicable` otherwise. It lets CDF route the return without reading the blocking explanation. Map every `BLOCKED` reason above to exactly one class:
+
+| Class | Blocking reason |
+|---|---|
+| `approval` | missing or invalid approval |
+| `scope-lock` | missing or contradictory canonical Scope Lock, including a projection that contradicts it |
+| `ambiguity` | implementation-affecting ambiguity in a managed package |
+| `requires-new-scope` | tasking would require new scope, architecture, behavior, or acceptance criteria |
+| `partial-remainder` | the partial-approval remainder cannot be separated safely |
 
 ## Output Modes
 
@@ -572,7 +405,14 @@ Choose the smallest output that satisfies the request:
 | CDP local save | Persist `cdp-cdtask/v1` deferred work |
 | CDF managed tasking | Return or persist `cdf-cdtask/v1` managed tasks to CDF |
 
-## Usage
+## References and Usage
+
+Use the references progressively:
+
+- [Task Templates](references/task-templates.md) — dependency, task-breakdown, and handoff output formats;
+- [Persistence](references/persistence.md) — route-specific task-document contracts and save verification.
+
+Read Task Templates before decomposition and Persistence before writing a file. If a reference is unavailable, continue with this Skill as the source of truth and mention the missing supporting reference.
 
 Typical CDF-managed invocation:
 

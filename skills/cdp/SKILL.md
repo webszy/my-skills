@@ -79,13 +79,15 @@ Never transition automatically from planning to implementation or persistence.
 CDF invokes CDP and retains lifecycle ownership. CDP must:
 
 1. analyze, classify, and plan;
-2. obtain or record the applicable human approval through the CDF flow;
-3. return an Approved Plan Package to CDF;
+2. run the Approval Gate directly with the user and reach a final approval outcome;
+3. return an Approved Plan Package to CDF carrying that outcome as `Planning Status`;
 4. stop.
+
+CDP owns the approval gate in this context: it displays the plan, judges whether a reply is valid approval, re-asks when it is not, and records the result. CDF checks only that a completed Approval Record exists before handing off. Never return an unfinished gate to CDF.
 
 In this context, do not modify code, invoke CDTask, create a local task file, or continue the lifecycle.
 
-If the context is ambiguous, ask whether CDF owns the lifecycle before choosing a handoff path.
+CDF declares this context with `Context: cdf-managed` and `Lifecycle-Owner: cdf`. If neither is present and the context is ambiguous, ask whether CDF owns the lifecycle before choosing a handoff path.
 
 ## Workflow
 
@@ -272,6 +274,7 @@ Rules:
 
 - Copy it verbatim to CDF and CDTask.
 - Do not paraphrase, reorder, merge, omit, weaken, or expand entries.
+- A readable projection such as `Change Scope` reproduces `will_change` and `will_not_change` verbatim and never replaces the canonical block.
 - Treat `out_of_scope`, `non_goals`, and `will_not_change` as enforceable constraints.
 - Any scope expansion returns to CDP for replanning, a new Scope Lock, and renewed approval.
 
@@ -296,6 +299,15 @@ Use this structure for every final plan. Adjust depth to the risk level without 
 
 ### Scope Lock
 <complete cdp-scope/v1 block>
+
+### Change Scope
+Readable projection of the canonical Scope Lock. It must not add, weaken, or replace it.
+
+#### Will Change
+- <verbatim from will_change>
+
+#### Will Not Change
+- <verbatim from will_not_change>
 
 ### Technical Approach
 <implementation direction; for XL include design, data/API/state flow, and phases>
@@ -350,6 +362,8 @@ Please state one explicitly, for example:
 - Approve this Scope Lock and Save as CDTask.
 - Approve only <items>; leave all remaining items unapproved.
 ```
+
+Ask this follow-up at most twice for the same plan. If the reply still does not identify both scope and action, or if the user declines the plan, end the gate without approval. In `standalone` context, ask the user how to proceed. In `cdf-managed` context, return `Planning Status: NOT_APPROVED` with the reason and no plan content.
 
 Do not treat authorization to inspect, plan, or edit the plan as approval to implement or persist it.
 
@@ -453,7 +467,7 @@ CDTask is optional. Recommend it when work:
 - needs explicit task decomposition;
 - should separate planning from implementation.
 
-Do not create a CDTask for every change. Before handoff, confirm CDTask is available. If unavailable, explain how to install it and do not fabricate a task package.
+Do not create a CDTask for every change. Before handoff, confirm CDTask is available. If unavailable, follow the unavailable-CDTask path at the end of this section and do not fabricate a task package.
 
 Use this exact internal handoff format:
 
@@ -495,21 +509,32 @@ For Level S/M/L, keep architecture-only headings with `Not applicable for <risk 
 
 `Approval-State: scope-approved-execution-deferred` means planning scope is approved but execution remains deferred. It is not execution authorization.
 
-If CDTask is unavailable, do not create `_cdtask`, generate a fallback handoff file, install anything automatically, or claim a save. Output the install command from [references/install.md](references/install.md), then require the user to select `Save as CDTask` again after installation.
+If CDTask is unavailable, do not create `_cdtask`, generate a fallback handoff file, install anything automatically, or claim a save. Output this command verbatim, then require the user to select `Save as CDTask` again after installation:
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
+```
+
+The command must name `--skill cdtask`. Never output the `cdp` install command here, and never invent a repository, package name, or path. [references/install.md](references/install.md) holds the single-agent variants.
 
 ### Return to CDF
+
+Run the Approval Gate to completion before returning. CDF routes on `Planning Status` alone and never judges an approval reply, so a package returned with an unfinished gate has no valid destination.
 
 In `cdf-managed` context, return:
 
 ```markdown
 # Approved Plan Package
 
-Planning Status: <PLAN_READY | APPROVED>
+Contract-Version: cdp-cdf/v1
+Planning Status: <APPROVED | NOT_APPROVED | BLOCKED>
 Lifecycle Owner: CDF
 Execution by CDP: Not authorized
 Code Changes by CDP: None
 Risk Level: <Level S | Level M | Level L | Level XL>
-Handoff: <awaiting plan approval | ready for CDF tasking | blocked with reason>
+Phase: <n of N | Not applicable>
+Remaining-Phases: <count or 0>
+Reason: <plain text; required for NOT_APPROVED and BLOCKED>
 Next Owner: <Human approver | CDF>
 
 <Development Plan>
@@ -518,7 +543,17 @@ Next Owner: <Human approver | CDF>
 <Locked Scope Summary or Approval Result Summary>
 ```
 
-`PLAN_READY` means approval is still needed. `APPROVED` requires valid approval. Never call CDTask or continue the lifecycle from this context.
+| `Planning Status` | Meaning | Required content |
+|---|---|---|
+| `APPROVED` | The Approval Gate completed with valid approval | Development Plan, canonical Scope Lock, Approval Record, and the applicable summary |
+| `NOT_APPROVED` | The user declined, or the gate ended without valid approval after the re-ask limit | `Reason` only; no Approval Record |
+| `BLOCKED` | The Evidence Gap, Evidence Conflict, or partial-subset path stopped planning | `Reason` only; no Approval Record |
+
+`Planning Status` is the only field CDF routes on. `Reason` is human-readable text and carries no routing meaning. Never return a status outside this table, and never return `APPROVED` without an Approval Record.
+
+For a phased Level XL plan, `Phase` and `Remaining-Phases` describe the approved phase only. `Remaining-Phases: 0` ends the flow; a positive count tells CDF another phase follows, and every phase requires its own approval.
+
+Never call CDTask or continue the lifecycle from this context.
 
 ## References and Usage
 
@@ -527,7 +562,7 @@ Use the references progressively:
 - [Requirement Gate](references/requirement-gate.md) — ambiguous, risky, or specification-like requirements;
 - [Karpathy Guidelines](references/karpathy-guidelines.md) — concise engineering discipline;
 - [Boundary Cases](references/boundary-cases.md) — upgrade, ambiguous approval, evidence conflict, and partial-approval examples;
-- [Installation](references/install.md) — CDTask availability and installation guidance.
+- [Installation](references/install.md) — CDP packaging and the per-agent CDTask install commands.
 
 For Level M, L, and XL, read the Karpathy Guidelines before producing a plan, design, or implementation. For Level S, do not read it by default; use it only after the target check when a prior attempt failed or additional minimal-change guardrails are objectively needed. Shared targets or high-risk overlap require reclassification, not extra reading while remaining Level S. If the reference is unavailable, continue with this Skill as the source of truth and mention the missing supporting reference.
 
@@ -550,6 +585,7 @@ For standalone completion, report only verification actually performed. Level L/
 - Do not weaken or rewrite a canonical Scope Lock.
 - Do not accept ambiguous approval.
 - Do not auto-transition into implementation or persistence.
+- Do not return a plan package to CDF without a final `Planning Status`.
 - Do not invoke CDTask in `cdf-managed` context.
 - Do not replace CDF lifecycle coordination or CDTask decomposition.
 - Do not invent a runtime, scheduler, execution state machine, or review system.
