@@ -4,6 +4,30 @@ Read this reference before compiling dependency data or tasks. It defines the on
 
 These are task-definition formats, not runtime state, scheduling data, implementation instructions beyond the approved plan, or execution authorization. The authority boundary, Scope Guard, and blocking rules remain in [COMPONENT.md](../COMPONENT.md).
 
+## Approved Planning Inputs
+
+Compile from the approved Development Plan exactly as received. It must retain these headings, in order, with no splitting, renaming, or regeneration:
+
+```markdown
+### Requirement Understanding
+### Evidence Summary
+### Risk Gate Result
+### Scope Lock
+### Technical Approach
+### Implementation Plan
+### Risks
+### Rollback Plan
+### Acceptance Criteria
+### Verification Strategy
+### Next Action
+```
+
+The plan's `### Scope Lock` contains the only canonical `cdf-scope/v1` block. `cdf-scope/v1.acceptance_criteria` is the only canonical acceptance source. The plan's readable `### Acceptance Criteria` must repeat every canonical entry once, in the same order and verbatim. Do not compile from a plan whose projection adds, deletes, weakens, broadens, reinterprets, merges, or splits an entry.
+
+When present, preserve the partial-approval projection defined in [Human Approval](../../../SKILL.md#6-human-approval) exactly, and do not treat it as a second scope authority.
+
+Approved items must quote canonical `in_scope` entries. Unapproved items remain protective exclusions only and can never produce a task, positive write scope, acceptance mapping, or verification obligation. If the subsets cannot be separated safely, return `BLOCKED` with `partial-separation`.
+
 ## Dependency Graph
 
 Use stable task IDs and a directed acyclic graph. List only dependency constraints supported by the approved Development Plan.
@@ -52,7 +76,7 @@ Keep every field. Use `None` only when the approved package establishes that the
 - <direction already present in the approved Development Plan>
 
 ### Acceptance Criteria
-- <verbatim approved criterion mapped to this task>
+- <applicable canonical cdf-scope/v1.acceptance_criteria entry, verbatim>
 
 ### Must Not Change
 - <verbatim exclusion, non-goal, protected area, or approved invariant>
@@ -75,13 +99,13 @@ READY
 - **Write Scope:** use only paths or areas supported by approved evidence. Never fabricate a path to make the task look concrete.
 - **Shared Contracts:** carry only contracts or invariants already present in the Development Plan or Scope Lock.
 - **Implementation Notes:** decompose approved direction; do not select a new approach.
-- **Acceptance Criteria:** copy the applicable approved criteria verbatim. Do not add task-local product acceptance criteria. Mechanical completion details belong in Planned Verification only when the approved strategy entails them.
-- **Must Not Change:** preserve relevant `out_of_scope`, `non_goals`, `will_not_change`, partial-approval exclusions, and protected behavior.
+- **Acceptance Criteria:** select only applicable canonical `cdf-scope/v1.acceptance_criteria` entries, retain their canonical order, and copy them verbatim. Each task must map to at least one existing canonical entry. Do not add, delete, weaken, broaden, reinterpret, merge, or split criteria. Mechanical completion details belong in Planned Verification only when the approved strategy entails them. If a new criterion would be needed, return `BLOCKED` with `acceptance-change` so CDF can refresh planning and obtain renewed approval.
+- **Must Not Change:** preserve relevant `out_of_scope`, `non_goals`, `will_not_change`, partial-approval exclusions, and protected behavior. An unapproved item may appear only here as a protective exclusion, never as positive work.
 - **Planned Verification:** describe checks to be run later by an authorized CDF execution flow. Never mark them passed or performed.
 - **Assumptions and Stop Conditions:** keep applicable canonical wording verbatim so a resumed CDF flow can revalidate it.
 - **Definition Status:** use only `DRAFT` while compiling and `READY` after the Compilation Gate passes. Do not add assigned, running, retrying, completed, reviewed, or verified runtime states.
 
-If a task cannot be completed using these fields without adding meaning, scope, architecture, risk judgement, or acceptance criteria, return `BLOCKED` under the applicable reason class.
+If a task cannot be completed using these fields without adding meaning, scope, architecture, risk judgement, or acceptance criteria, return `BLOCKED` under the applicable reason class. CDF must produce refreshed planning and obtain renewed approval before task compilation resumes.
 
 ## Scope Guard Output
 
@@ -92,11 +116,14 @@ Include the completed Scope Guard after all task definitions:
 - [x] Every task maps to approved `in_scope` or `will_change` content.
 - [x] No task treats `out_of_scope`, `non_goals`, `will_not_change`, or an unapproved remainder as positive scope or work; those entries appear only as protective constraints.
 - [x] The canonical Scope Lock is byte-for-byte unchanged.
-- [x] The Approval Record and approved phase boundary are preserved.
+- [x] The Development Plan is carried verbatim with its canonical headings and sole Scope Lock block.
+- [x] The Development Plan Acceptance Criteria is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`.
+- [x] Every task-level criterion is an applicable canonical entry quoted verbatim and in canonical order; no task requires a new criterion.
+- [x] The immutable Approval Record, stable Partial Approval Result when applicable, and approved phase boundary are preserved without creating a second scope authority.
 - [x] Dependencies and tasks introduce no product, technical, or architecture decision.
-- [x] Acceptance criteria are preserved and are not broadened, weakened, or replaced.
 - [x] Planned verification maps to the approved Verification Strategy and is not reported as performed.
 - [x] Assumptions, stop conditions, and protected areas are visible to a future CDF resume.
+- [x] Source worktree state, the path-scoped stable changes array, and CDF's save-drift preflight result and notes are preserved; dirty state was not treated as automatically material.
 - [x] No implementation, execution, scheduling, approval, risk classification, or implementation review occurred.
 ```
 
@@ -110,9 +137,15 @@ Include these constraints in the saved document. They constrain a future CDF res
 ## Future CDF Execution Constraints
 - Resume only through CDF.
 - Treat the canonical Scope Lock, approved phase boundary, and partial-approval exclusions as hard limits.
+- Treat the persisted Approval Record as immutable historical scope and Save as Task authorization, not future execution authorization.
 - Work only within task Write Scope and approved dependencies.
-- Re-check repository drift, assumptions, stop conditions, task applicability, and approval validity before implementation.
+- Compare the stored Scope Lock and Approval Record payloads line for line under [Integrity Verification](../../../SKILL.md#integrity-verification); never modify either stored payload.
+- Re-check workspace, branch, commit, the path-scoped source worktree changes array, the recorded save-drift preflight, repository drift, assumptions, stop conditions, task applicability, and approval applicability before implementation. Dirty state alone is not automatically material drift.
 - Stop and return to CDF planning if implementation requires new scope, a changed technical decision, changed acceptance criteria, or work from an unapproved remainder.
 - Report only verification checks actually performed during a separately authorized execution.
-- Do not infer execution authorization from this task document or its `READY` definition state.
+- Create a runtime Resume Authorization Record only after full validation and an explicit current continue request. Do not write that runtime record into this saved task.
+- An inspect, review, summarize, or validate request creates no Resume Authorization Record and authorizes no code changes.
+- Do not infer execution authorization from this task document, its saved Approval Record, or its `READY` definition state.
 ```
+
+After successful validation of an explicit continue request, CDF uses the runtime-only authorization format defined in [Resume a Saved Task](../../../SKILL.md#resume-a-saved-task). That record must not modify the saved task or its Approval Record.

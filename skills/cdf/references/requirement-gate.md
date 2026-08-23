@@ -204,6 +204,8 @@ This artifact records requirement meaning; it is not an approval record, Scope L
 
 ## Acceptance criteria
 
+Criteria captured at the Requirement Gate clarify intent; they are not yet an approved authority. When CDF produces an approval-ready Development Plan, place the agreed wording in `cdf-scope/v1.acceptance_criteria`. That array is then the sole canonical acceptance source, and the plan's `### Acceptance Criteria` section must repeat it item for item, in the same order and exact wording.
+
 Use observable checklist criteria for ordinary work:
 
 ```markdown
@@ -220,4 +222,3 @@ Use Given / When / Then when state, permissions, flows, or API behavior make the
 ```
 
 Acceptance criteria must distinguish planned verification from completed verification. During planning, describe checks that should be run; after execution, report only checks actually run and their results.
-

@@ -4,10 +4,11 @@ This repository contains CDF, a controlled AI development workflow, alongside ot
 
 ## CDF: Controlled Development Flow
 
-CDF is the only user-facing Skill in the CDF Suite. It owns the complete controlled-development path:
+CDF is the only user-facing entry point in the CDF Suite. It owns the complete controlled-development path:
 
 ```text
 Requirement / PRD / Development Request
+    -> Requirement Gate
     -> Requirement Understanding
     -> Repository Evidence Inspection
     -> Risk Classification
@@ -17,14 +18,22 @@ Requirement / PRD / Development Request
     -> Execute Now | Save as Task
 ```
 
-CDF keeps small changes lightweight while applying stronger controls to risky, sensitive, cross-cutting, or architectural work. Every development path—including “turn this PRD into tasks”—must complete repository inspection, planning, Scope Lock, and approval before implementation or task compilation.
+CDF keeps small changes lightweight while applying stronger controls to risky, sensitive, cross-cutting, or architectural work. Every development path—including “turn this PRD into tasks”—must complete repository inspection, risk classification, planning, Scope Lock, and approval before implementation or task compilation. The S/M/L/XL risk model is unchanged.
 
 | User action | Result |
 |---|---|
 | **Execute Now** | Implement only the approved scope and report verification actually performed |
-| **Save as Task** | Compile the approved plan into a resumable `_cdtask` document, verify the saved artifact, return its path, and stop |
+| **Save as Task** | Compile and verify a resumable `_cdtask` document, return its path, and stop; this approval authorizes persistence only |
 
-CDTask is an internal post-approval CDF component. It is not a separate Skill, installation target, or user entry point.
+Task compilation is an internal CDF component. There is no top-level tasking Skill, separate installation target, or independent invocation.
+
+### Contract essentials
+
+- The Development Plan uses these canonical headings in order: `Requirement Understanding`, `Evidence Summary`, `Risk Gate Result`, `Scope Lock`, `Technical Approach`, `Implementation Plan`, `Risks`, `Rollback Plan`, `Acceptance Criteria`, `Verification Strategy`, and `Next Action`.
+- The single `cdf-scope/v1` block is the sole canonical scope authority, and its `acceptance_criteria` field is the sole canonical acceptance source. The Development Plan’s `Acceptance Criteria` section is only an item-for-item, same-order, verbatim projection.
+- For partial approval, `Partial Approval Result` is an audit projection of approved and unapproved items. It does not copy the complete Scope Lock or create a second authority source.
+- Before saving, CDF performs a drift preflight and records current `Workspace`, `Source-Branch`, `Source-Commit`, `Source-Worktree-State`, and relevant `Source-Worktree-Changes`. Material drift returns to planning and renewed approval.
+- Scope Lock and Approval Record SHA-256 values use deterministic serialization: UTF-8, LF line endings, no Markdown fence delimiters, no trailing whitespace on content lines, and exactly one trailing LF.
 
 Resume a saved task through CDF:
 
@@ -32,7 +41,7 @@ Resume a saved task through CDF:
 $cdf continue task <path>
 ```
 
-CDF validates the task contract, Scope Lock and Approval Record integrity, current repository state, assumptions, stop conditions, and material drift before continuing.
+CDF validates the task contract and required sections, integrity digests, current repository state, assumptions, stop conditions, and material drift. After validation succeeds, the explicit continue request creates a current-turn `Resume Authorization Record`; only then may saved work execute. Inspecting, reviewing, summarizing, or validating a task does not authorize execution.
 
 CDF is configured for explicit invocation. Common forms include `$cdf`, `/cdf`, `cdf:`, and `controlled-development-flow`.
 

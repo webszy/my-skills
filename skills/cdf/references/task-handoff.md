@@ -14,8 +14,11 @@ CDF may create the handoff only after all of the following are true:
 4. the Development Plan and canonical `cdf-scope/v1` Scope Lock are complete;
 5. a valid Approval Record identifies the approved scope or approved subset;
 6. the user explicitly selected **Save as Task**.
+7. CDF reran the save drift preflight against the approved planning evidence and either found no drift or recorded why observed drift is non-material.
 
 Raw requirements, PRDs, unapproved plans, ambiguous acknowledgements, and manual task requests are not valid inputs. Route them through the normal CDF requirement, evidence, planning, and approval stages first.
+
+A Level S Fast Path Plan is also not a valid input: it has no canonical Scope Lock. When a fast-path change is to be saved as a task, CDF must first expand it into a full Development Plan with a canonical `cdf-scope/v1` block and obtain approval of that expanded plan. The risk level stays `Level S`.
 
 ## Handoff header
 
@@ -32,9 +35,15 @@ Workspace: <absolute path or Unavailable>
 Source-Branch: <branch or Unavailable>
 Source-Commit: <commit or Unavailable>
 Source-Worktree-State: <clean | dirty | Unavailable>
+Source-Worktree-Changes:
+  - <stable git status entry for an approved, affected, or protected path>
+Save-Drift-Preflight: <matched | non-material-drift>
+Save-Drift-Notes: <none | concise evidence-backed conclusion>
 ```
 
-`Unavailable` is an explicit evidence state, not a guessed value. Record the reason when missing workspace metadata affects persistence or later drift checks.
+Use `Source-Worktree-Changes: []` when clean. When unavailable, use a single `Unavailable` list entry and record the reason; when dirty, preserve both Git `XY` status characters, including leading spaces, for only the approved, affected, or protected repository-relative paths, sorted by path and then status. Quote entries when needed so YAML retains those bytes. Do not dump unrelated repository changes. Dirty state is a drift signal, not automatic proof of material drift. Never overwrite or discard a user's uncommitted changes.
+
+`Unavailable` is an explicit evidence state, not a guessed value. Record the reason when missing workspace metadata affects persistence or later drift checks. A material save-preflight difference is not a valid handoff: CDF must first return to planning, refresh evidence and risk, revise the Development Plan or Scope Lock when needed, and obtain renewed approval. The internal compiler receives the latest non-material metadata but does not perform planning.
 
 CDF may also supply naming and destination metadata:
 
@@ -47,18 +56,21 @@ Both fields are optional and cannot change approved task meaning. Without `Reque
 
 ## Required payload
 
-Carry these sections in the handoff:
+Carry the approved Development Plan directly, with these exact headings in this order:
 
 1. Requirement Understanding;
-2. Evidence Summary and material evidence gaps, if any;
-3. Development Plan;
-4. canonical Scope Lock;
-5. Approval Record;
-6. Acceptance Criteria;
-7. Verification Strategy;
-8. Risks;
-9. Rollback Plan when required by the risk or change type;
-10. Approved Phase Boundary when approval covers one phase or subset.
+2. Evidence Summary;
+3. Risk Gate Result;
+4. Scope Lock;
+5. Technical Approach;
+6. Implementation Plan;
+7. Risks;
+8. Rollback Plan;
+9. Acceptance Criteria;
+10. Verification Strategy;
+11. Next Action.
+
+Do not rename, combine, split, or regenerate these sections. Also carry the Approval Record verbatim, the Partial Approval Result when applicable, and the Approved Phase Boundary when approval covers one phase. A Level S or M Rollback Plan may contain a concise reversible action or `None` only when rollback is genuinely not applicable.
 
 The canonical Scope Lock uses this schema:
 
@@ -78,6 +90,12 @@ Every field must exist. Empty arrays are valid. Do not manufacture assumptions, 
 
 Treat the canonical Scope Lock as immutable data. Preserve its canonical block verbatim. The internal compiler must not paraphrase, rewrite, expand, weaken, reorder, normalize away distinctions, or silently add scope. Task-level scope may quote or map to canonical entries, but it cannot replace them.
 
+`cdf-scope/v1.acceptance_criteria` is the sole canonical acceptance source. The Development Plan's `Acceptance Criteria` section is a readable projection only: it must repeat every canonical entry item for item, in the same order and exact wording. Task-level acceptance may reference only applicable canonical entries verbatim. Any addition, deletion, weakening, broadening, reinterpretation, merge, or split is `BLOCKED` and returns to refreshed CDF planning and renewed approval.
+
+For partial approval, carry the audit projection defined in [Human Approval](../SKILL.md#6-human-approval) verbatim.
+
+Do not include the complete Scope Lock in this result. The plan's single `cdf-scope/v1` block remains canonical. Approved Items must exactly match its approved `in_scope` entries; Unapproved Items remain verbatim and must be protected by canonical exclusions. This projection is audit information, not a second authority. Unsafe or ambiguous separation is `BLOCKED` and requires a revised Scope Lock and renewed approval.
+
 ## Handoff validation
 
 Before compilation, verify:
@@ -86,22 +104,29 @@ Before compilation, verify:
 - the risk level is supported and matches the approved plan;
 - the Approval Record identifies the approver statement, approved boundary, timestamp or session context, approval type, and **Save as Task** action;
 - the canonical Scope Lock has all eight fields and is internally consistent;
-- plan steps and acceptance criteria fit inside the Scope Lock;
+- the Development Plan has the exact required headings and carries the approved sections directly;
+- the plan's Acceptance Criteria projection exactly matches canonical `acceptance_criteria` item for item, in order and wording;
+- plan steps and all task-level acceptance references fit inside the Scope Lock;
 - any partial approval contains only the approved subset and keeps the remainder excluded;
 - the handoff contains enough repository traceability to perform a later drift check;
+- the current worktree state and relevant changes list are valid and the save drift preflight is recorded;
 - rollback and phase boundaries are present when applicable.
 
 Task compilation must become `BLOCKED` if safe decomposition would require:
 
 - a new module, interface, behavior, dependency, or affected area;
 - broader write scope or changed protected areas;
-- changed acceptance criteria or verification obligations;
+- changed or newly invented acceptance criteria or verification obligations;
 - a new architecture or technical decision not contained in the approved plan;
 - resolution of a material planning ambiguity;
 - inclusion of an unapproved partial-approval remainder;
 - modification of the canonical Scope Lock.
 
-On `BLOCKED`, return the reason and evidence to CDF planning. CDF must reinspect as needed, revise the Development Plan and Scope Lock, and request renewed approval. The compiler must not resolve the defect by expanding or rewriting scope.
+On `BLOCKED`, return the reason and evidence to CDF planning. CDF must reinspect the relevant evidence, produce a refreshed Development Plan and Scope Lock package, and request renewed approval even when re-analysis leaves the Scope Lock text unchanged. The compiler must not resolve the defect by expanding or rewriting scope.
+
+## Integrity verification
+
+Apply [Integrity Verification](../SKILL.md#integrity-verification) unchanged at handoff validation, save, read-back, and resume. Text comparison is authoritative; a SHA-256 digest is optional and may be recorded only when a hashing command was actually run. Ambiguous boundaries or a reordered Scope Lock invalidate the handoff; never rewrite approved content to force a match.
 
 ## Persistence invariant
 
@@ -111,9 +136,9 @@ The default task path remains:
 <Workspace>/_cdtask/YYYY-MM-DD-<slug>.md
 ```
 
-The persisted document must retain `cdf-cdtask/v1`, source traceability, the canonical Scope Lock verbatim, Approval Record, dependency-aware task definitions, Scope Guard, verification and rollback obligations, and resume rules. It must also store SHA-256 digests of the exact canonical Scope Lock and Approval Record bytes. After writing, read the document back, recompute both digests, and verify every invariant before reporting success. If save or read-back verification fails, do not report the task as ready.
+The persisted document must retain `cdf-cdtask/v1`, source traceability including relevant worktree changes and the save preflight result, the canonical Scope Lock verbatim, immutable Approval Record, Partial Approval Result when applicable, dependency-aware task definitions, Scope Guard, verification and rollback obligations, and resume rules. After writing, read the document back and verify every invariant, including a line-for-line comparison of both canonical payloads, before reporting success. If save or read-back verification fails, do not report the task as ready.
 
-Task readiness is not execution and does not expand the approved boundary.
+Task readiness is not execution and does not expand the approved boundary. The saved Approval Record proves approved scope and persistence authorization; it does not authorize future code changes. Never modify the saved record during resume; comparison is validation only.
 
 ## Resume entry
 
@@ -129,12 +154,15 @@ Before continuing:
 
 1. read the persisted task from the requested path;
 2. validate `cdf-cdtask/v1` and required sections;
-3. validate the canonical `cdf-scope/v1` block and Approval Record by recomputing and matching their persisted SHA-256 digests;
-4. compare the recorded workspace, branch, commit, relevant worktree state, evidence, assumptions, stop conditions, planned write scope, shared contracts, and target code with current repository state;
+3. validate the canonical `cdf-scope/v1` block and immutable Approval Record by comparing their persisted payloads line for line under [Integrity Verification](../SKILL.md#integrity-verification);
+4. compare the recorded workspace, branch, commit, relevant worktree state and changes list, evidence, assumptions, stop conditions, planned write scope, shared contracts, and target code with current repository state;
 5. determine whether drift is material to plan correctness, risk, scope, acceptance, verification, or rollback;
-6. confirm that the current user request authorizes continuation and that approval remains applicable.
+6. confirm that the current user request explicitly authorizes continuation and that the approved scope remains applicable;
+7. resolve the task path absolutely and create the runtime Resume Authorization Record without changing the persisted task.
 
-A saved task proves what scope was approved when it was created; it is not perpetual permission to execute regardless of current intent or repository state. An explicit continue request initiates resume validation. Code changes may begin only after the checks above pass.
+A saved task proves what scope was approved when it was created; it is not perpetual permission to execute regardless of current intent or repository state. An explicit continue request initiates resume validation and, only after successful validation, provides current-turn execution authorization using the record defined in [Resume a Saved Task](../SKILL.md#resume-a-saved-task).
+
+Do not persist this runtime record into the original task or modify the Approval Record. A request only to inspect, review, summarize, or validate the task creates no Resume Authorization Record and authorizes no code changes.
 
 ## Drift rules
 

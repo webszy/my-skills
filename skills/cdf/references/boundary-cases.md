@@ -135,6 +135,25 @@ All eight arrays must exist. Empty arrays are valid; do not invent filler text m
 
 If the user approves this subset, the Approval Record must identify it as partial approval and keep the permission item visibly unapproved. **Save as Task** may hand off only the approved-subset Scope Lock; no task may be created for the remainder.
 
+The plan above remains the only canonical Scope Lock. Record the partial outcome as a projection without copying that block:
+
+```markdown
+## Partial Approval Result
+
+Approval Type: partial
+
+### Approved Items
+- Update the admin help copy to the confirmed text.
+
+### Unapproved Items
+- Hide the export entry from users without export permission.
+
+### Canonical Approved Scope
+Scope-Lock-Version: cdf-scope/v1
+```
+
+The approved item exactly matches canonical `in_scope`; the unapproved item remains verbatim and is protected by canonical exclusions. The projection creates no second scope authority.
+
 ## Case 5: New scope discovered after approval
 
 ### Context
@@ -156,7 +175,7 @@ Neither previous approval nor a persisted task authorizes the new data or contra
 
 ### Context
 
-A saved task records commit `abc123`. The current workspace is at `def456`.
+A saved task records commit `abc123` plus a stable list of relevant `Source-Worktree-Changes`. The current workspace is at `def456`, and its relevant status list may also differ.
 
 Do not blindly execute the task, but do not declare material drift from the commit mismatch alone. Compare the intervening changes with the task's evidence, assumptions, planned write scope, shared contracts, acceptance criteria, and verification strategy.
 
@@ -164,5 +183,7 @@ Do not blindly execute the task, but do not declare material drift from the comm
 - A changed target API, renamed module, altered permission rule, invalidated assumption, or conflicting implementation is material.
 - When drift is material, return to planning, update the Scope Lock as needed, and obtain renewed approval.
 - When drift is demonstrably non-material, record the check and continue inside the existing approved scope.
+
+The saved Approval Record still does not authorize execution. Only an explicit CDF continue request followed by successful contract, integrity, scope, assumption, and drift validation creates the current-turn Resume Authorization Record. Inspecting, reviewing, summarizing, or validating the task creates no such record and authorizes no code changes.
 
 See [Task Handoff](task-handoff.md) for the complete resume and drift rules.

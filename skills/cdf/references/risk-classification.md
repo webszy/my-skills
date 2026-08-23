@@ -49,6 +49,8 @@ Level S is valid only when every row passes:
 
 Record `PASS`, `FAIL`, or `UNKNOWN` with evidence. A `FAIL` requires Level M or higher. An `UNKNOWN` follows the Evidence Gap path.
 
+All six rows must be `PASS` to use the Level S Fast Path. Assess them as reasoning; report only the aggregate result on the fast path's `Reverse Check` line.
+
 ## Level M Reverse Check
 
 Level M is valid only when every row passes:
@@ -89,13 +91,13 @@ A separable non-conflicting subset may proceed only through a new plan, its own 
 
 ## Final Record
 
-The Risk Gate Result must contain:
+For Level S the classification is internal reasoning, surfaced only as `Reverse Check: PASS` on the Fast Path Plan. For Level M and above, the Risk Gate Result must contain:
 
 - final level;
 - evidence for all six dimensions;
 - each mandatory signal's `CLEAR`, `HIT`, or `UNKNOWN` result;
-- S or M Reverse Check results when applicable;
+- the M Reverse Check result when applicable;
 - evidence gaps or conflicts and their resolution;
 - a concise rationale for the final level.
 
-For Level S, keep this record compact while retaining evidence. For Level L/XL, include material interactions, rollback difficulty, and coordination requirements.
+For Level L/XL, include material interactions, rollback difficulty, and coordination requirements.

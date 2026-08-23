@@ -1,6 +1,0 @@
-interface:
-  display_name: "cdtask"
-  short_description: "Converts an approved plan into verifiable task definitions"
-  default_prompt: "Use $cdtask to convert this approved plan into dependency-aware task definitions. Do not execute it."
-policy:
-  allow_implicit_invocation: false
