@@ -5,14 +5,22 @@ This collection includes the evolving Controlled Development Flow suite for cont
 The currently available CDF Suite path is:
 
 ```text
-Requirement → CDF → CDP → CDF → CDTask → CDF → READY_TO_EXECUTE
+Requirement
+  → CDF assessment
+  → CDP planning + Scope Lock
+  → Human Plan Approval (run by CDP)
+  → CDF handoff preconditions
+  → CDTask definition, when selected
+  → Handoff-ready Task Definition, or the Approved Plan Package
 ```
+
+CDTask is optional: when the approved work gains nothing from task decomposition, the Approved Plan Package is the terminal output. Execution is outside the current suite.
 
 ## cdf
 
-`cdf` is the control-plane Skill that owns lifecycle state transitions and orchestrates the managed planning-to-tasking flow. The current integration stops before execution runtime.
+`cdf` is the control-plane Skill that assesses whether a request enters the controlled flow, routes each component return on contract fields, and enforces the handoff preconditions that protect approved scope. It holds no persistent state and stops at the handoff; execution, verification, and review are outside v0.1.
 
-Read the full guide: [skills/cdf/SKILL.md](skills/cdf/SKILL.md)
+Read the full guide: [skills/cdf/README.md](skills/cdf/README.md)
 
 ```bash
 npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
@@ -20,7 +28,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 
 ## cdp (controlled-development-planning)
 
-`cdp` provides evidence-based, risk-aware planning with standalone and CDF-managed workflows.
+`cdp` provides evidence-based, risk-aware planning with standalone and CDF-managed workflows. It also owns the human approval gate in both contexts.
 
 Read the full guide: [skills/cdp/README.md](skills/cdp/README.md)
 
@@ -34,9 +42,9 @@ npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claud
 
 ## cdtask
 
-`cdtask` turns stable requirements, approved standalone CDP handoffs, or CDF-managed approved plans into scoped, dependency-aware, verifiable execution units. It can optionally persist tasks, but it does not implement or schedule code itself.
+`cdtask` turns stable requirements, approved standalone CDP handoffs, or CDF-managed approved plans into scoped, dependency-aware, verifiable task definitions and executor handoff information. It can optionally persist a resumable task document, but it does not execute, schedule, or review work.
 
-Read the full guide: [skills/cdtask/SKILL.md](skills/cdtask/SKILL.md)
+Read the full guide: [skills/cdtask/README.md](skills/cdtask/README.md)
 
 ```bash
 npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y

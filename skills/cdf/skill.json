@@ -1,0 +1,31 @@
+{
+  "name": "cdf",
+  "displayName": "Controlled Development Flow",
+  "description": "A control-plane Skill for AI Coding Agents. Use when invoked as cdf, /cdf, $cdf, cdf:, or controlled-development-flow. Assesses whether a development request enters the controlled flow, routes CDP and CDTask returns on contract fields, enforces handoff preconditions, and preserves the approved Scope Lock. It does not implement, execute, verify, or review code.",
+  "version": "1.1.0",
+  "author": "webszy",
+  "license": "MIT",
+  "repository": "https://github.com/webszy/my-skills",
+  "keywords": [
+    "ai-skill",
+    "agent-skill",
+    "codex",
+    "claude-code",
+    "workflow",
+    "control-plane",
+    "controlled-development-flow"
+  ],
+  "platforms": [
+    "codex",
+    "claude-code"
+  ],
+  "entry": "SKILL.md",
+  "references": [
+    "references/flow-contracts.md"
+  ],
+  "install": {
+    "codex": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -g -y",
+    "claudeCode": "npx skills add https://github.com/webszy/my-skills --skill cdf -a claude-code -g -y",
+    "both": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y"
+  }
+}

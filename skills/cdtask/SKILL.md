@@ -377,9 +377,16 @@ Tasking Status: <READY | NOT_READY | BLOCKED>
 Contract-Version: cdf-cdtask/v1
 Blocked-Reason-Class: <approval | scope-lock | requires-new-scope | ambiguity | partial-remainder | Not applicable>
 Execution Owner: CDF
-Task Count: <N when available>
+Task Count: <N; required and greater than zero when READY>
 Next Owner: CDF
 ```
+
+`Execution Owner` and `Next Owner` are fixed attestations: both are always `CDF`. They
+state that CDTask returned the flow rather than continuing it, and CDF rejects any other
+value. Never write a different owner to signal that work should proceed elsewhere.
+
+`Task Count` must be present and greater than zero whenever the status is `READY`. A
+`READY` return with no task contradicts itself; report `NOT_READY` instead.
 
 `Blocked-Reason-Class` is required when the status is `BLOCKED` and `Not applicable` otherwise. It lets CDF route the return without reading the blocking explanation. Map every `BLOCKED` reason above to exactly one class:
 

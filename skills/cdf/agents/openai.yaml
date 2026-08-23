@@ -1,0 +1,6 @@
+interface:
+  display_name: "cdf"
+  short_description: "Routes a development request through controlled planning and tasking"
+  default_prompt: "Use $cdf to assess this requirement, obtain an approved CDP plan, and prepare a CDTask handoff."
+policy:
+  allow_implicit_invocation: false

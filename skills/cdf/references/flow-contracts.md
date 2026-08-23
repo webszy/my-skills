@@ -37,6 +37,9 @@ Phase: <n of N | Not applicable>
 Remaining-Phases: <count or 0>
 Reason: <plain text; required for NOT_APPROVED and BLOCKED>
 Next Owner: <Human approver | CDF>
+Workspace: <absolute path or Unavailable>
+Source-Branch: <branch or Unavailable>
+Source-Commit: <commit or Unavailable>
 ```
 
 | `Planning Status` | Meaning | Required content |
@@ -45,7 +48,21 @@ Next Owner: <Human approver | CDF>
 | `NOT_APPROVED` | The user declined, or the gate ended without valid approval | `Reason` only; no Approval Record |
 | `BLOCKED` | CDP could not produce a safe plan or a bounded Scope Lock | `Reason` only; no Approval Record |
 
-`Planning Status` is the only routing field. `Reason` is human-readable text with no routing meaning.
+`Planning Status` is the only field that selects a routing branch. Every other field below is still checked, and a failed check stops the handoff.
+
+`Lifecycle Owner`, `Execution by CDP`, and `Code Changes by CDP` are attestations, not
+variables. They must read exactly `CDF`, `Not authorized`, and `None`. A different value
+means CDP acted outside the managed contract and is not repairable by replanning.
+
+`Next Owner` must be `CDF` on an `APPROVED` return. `Human approver` alongside `APPROVED`
+is contradictory: it says the approval gate is still open, and CDP must never return an
+unfinished gate. On `NOT_APPROVED` and `BLOCKED`, `Next Owner` is informational.
+
+`Reason` is human-readable text with no routing meaning.
+
+`Workspace`, `Source-Branch`, and `Source-Commit` carry the repository state the plan was
+approved against. They are required on an `APPROVED` return, each holding a real value or
+`Unavailable`. CDF uses them for the drift check and must never supply or repair them.
 
 `Phase` and `Remaining-Phases` describe the approved phase only. `Remaining-Phases: 0` ends the flow; a positive count means another phase follows and requires its own approval.
 
@@ -73,9 +90,18 @@ Tasking Status: <READY | NOT_READY | BLOCKED>
 Contract-Version: cdf-cdtask/v1
 Blocked-Reason-Class: <approval | scope-lock | requires-new-scope | ambiguity | partial-remainder | Not applicable>
 Execution Owner: CDF
-Task Count: <N when available>
+Task Count: <N; required and greater than zero when READY>
 Next Owner: CDF
 ```
+
+`Contract-Version` must be present and recognized before CDF routes on `Tasking Status`.
+
+`Execution Owner` and `Next Owner` are attestations and must both read `CDF`. CDTask
+returns the flow to CDF; any other value means it tried to continue the lifecycle itself.
+
+`Task Count` is required and greater than zero on a `READY` return, because a task
+definition with no task cannot be handed off. CDF carries the count into the terminal
+report. On `NOT_READY` and `BLOCKED` the field is informational.
 
 | `Blocked-Reason-Class` | Source defect | Where the repair belongs |
 |---|---|---|

@@ -23,7 +23,7 @@
     {
       "name": "cdf",
       "displayName": "Controlled Development Flow",
-      "description": "Orchestrates controlled AI-assisted development lifecycle gates and the implemented planning-to-tasking flow.",
+      "description": "Control plane that assesses whether a request enters the controlled flow, routes component returns on contract fields, and enforces handoff preconditions.",
       "path": "skills/cdf",
       "platforms": [
         "codex",
@@ -34,7 +34,7 @@
     {
       "name": "cdp",
       "displayName": "Controlled Development Planning",
-      "description": "Evidence-based, risk-aware development planning with standalone and CDF-managed workflows.",
+      "description": "Evidence-based, risk-aware development planning with standalone and CDF-managed workflows, owning the Scope Lock and the human approval gate.",
       "path": "skills/cdp",
       "platforms": [
         "codex",
@@ -45,7 +45,7 @@
     {
       "name": "cdtask",
       "displayName": "Controlled Development Task",
-      "description": "Converts approved plans and stable requirements into scoped, dependency-aware, verifiable execution units.",
+      "description": "Converts approved plans and stable requirements into scoped, dependency-aware, verifiable task definitions and executor handoff information.",
       "path": "skills/cdtask",
       "platforms": [
         "codex",

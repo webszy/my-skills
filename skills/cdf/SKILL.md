@@ -96,6 +96,8 @@ If `Risk Level` differs from the previous round for the same requirement, CDP ha
 | `BLOCKED` | `ambiguity` | Return the package to CDP for correction and report the blocker to the user |
 | `BLOCKED` | missing or unrecognized | Report to the user and end the round |
 
+Before routing on `Tasking Status`, confirm the return carries `Contract-Version: cdf-cdtask/v1` and a recognized status. If either is missing or unrecognized, treat the return as blocked, name the field, and end the round. Then apply the Attestation and Ownership Fields checks to `Execution Owner`, `Next Owner`, and `Task Count`.
+
 ## Operating Context
 
 CDF invokes CDP in `cdf-managed` context. This means:
@@ -115,6 +117,7 @@ CDP owns the approval gate. CDF enforces it at the handoff boundary through fiel
 
 - `Contract-Version: cdp-cdf/v1` is present and recognized;
 - `Planning Status` is `APPROVED`;
+- every attestation field carries its required constant;
 - an Approval Record exists with `Scope Approved: Yes`;
 - the Approval Record states `Code Changes Authorized In This Turn: No`;
 - a canonical `cdp-scope/v1` block exists with all eight arrays populated;
@@ -126,6 +129,31 @@ CDP owns the approval gate. CDF enforces it at the handoff boundary through fiel
 Any failed condition returns the package to CDP. Do not repair it, do not supply a missing field, and do not proceed on a package that is merely close enough.
 
 Approval confirms direction and scope. It does not authorize CDF to implement or execute anything.
+
+### Attestation and Ownership Fields
+
+Every contract field is checked. A field CDF never reads is a field that can silently carry a false claim, so treat each one below as a condition, not decoration.
+
+The attestation fields are constants. Any other value means the sending component acted outside its managed contract:
+
+| Field | Contract | Required value |
+|---|---|---|
+| `Lifecycle Owner` | `cdp-cdf/v1` | `CDF` |
+| `Execution by CDP` | `cdp-cdf/v1` | `Not authorized` |
+| `Code Changes by CDP` | `cdp-cdf/v1` | `None` |
+| `Execution Owner` | `cdf-cdtask/v1` | `CDF` |
+
+A wrong value is not a formatting defect and is not repairable by replanning: report it to the user with the field and the received value, produce no handoff, and end the round. A missing value is a malformed return; treat it as blocked and name the field.
+
+The ownership and count fields route as follows:
+
+| Field | Contract | CDF action |
+|---|---|---|
+| `Next Owner` | `cdp-cdf/v1` | Must be `CDF` when `Planning Status` is `APPROVED`. `Human approver` with `APPROVED` means the approval gate never closed: return the package to CDP and do not hand off. On `NOT_APPROVED` or `BLOCKED`, either value is expected and carries no routing meaning |
+| `Next Owner` | `cdf-cdtask/v1` | Must be `CDF`. Any other value means CDTask tried to continue the lifecycle: report it and end the round |
+| `Task Count` | `cdf-cdtask/v1` | Required and greater than zero when `Tasking Status` is `READY`; a `READY` return with no task is contradictory and goes back to CDTask as a `NOT_READY` repair. Carry the count into the terminal report. It has no meaning on `NOT_READY` or `BLOCKED` |
+
+These checks are field comparisons, like every other CDF gate. Do not infer intent from a wrong value, and do not accept a package because the rest of it looks correct.
 
 ### Scope Lock Preservation
 
@@ -241,7 +269,7 @@ A `NOT_APPROVED` or `BLOCKED` return carries `Reason` and no plan content. Absen
 
 CDF sends CDTask only the approved package. CDTask determines task structure and dependencies without changing implementation meaning.
 
-The CDF v0.1 terminal output is a handoff-ready Task Definition, or the Approved Plan Package when CDTask is not selected, plus an explicit statement that execution remains outside CDF.
+The CDF v0.1 terminal output is a handoff-ready Task Definition, or the Approved Plan Package when CDTask is not selected, plus an explicit statement that execution remains outside CDF. When CDTask ran, state its `Task Count` so the reader knows how many task definitions the handoff contains.
 
 ## References and Usage
 
@@ -268,6 +296,7 @@ Keep coordination concise. Let CDP provide technical depth and CDTask provide ta
 - Do not invoke CDTask while material decisions remain unresolved.
 - Do not expand approved scope.
 - Do not invent missing planning decisions or supply a missing contract field.
+- Do not accept an attestation field that carries the wrong value, and do not correct one.
 - Do not replace CDP or CDTask responsibilities.
 - Do not claim runtime, event-system, public schema-protocol, CLI, executor, verification, or review capability.
 - End after task-definition handoff, or after the approved plan package when CDTask is not selected.

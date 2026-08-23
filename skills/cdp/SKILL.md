@@ -233,10 +233,14 @@ A narrowed, non-conflicting subset may proceed only as a separate plan with its 
 
 | Level | Required classification rule | Planning depth | Gate |
 |---|---|---|---|
-| **S** | All escalation rows `CLEAR`; all S reverse rows `PASS`; single local, non-behavioral, trivially reversible change | Compact plan | Explicit user choice before action |
-| **M** | All escalation rows `CLEAR`; all M reverse rows `PASS`; bounded multi-file or local behavior change with known dependencies | Brief plan | Explicit user choice before action |
-| **L** | Any escalation signal, cross-cutting or sensitive effect, meaningful ambiguity, or non-trivial rollback | Detailed plan | Valid plan approval required |
+| **S** | All escalation rows `CLEAR`; all S reverse rows `PASS`; single local, non-behavioral, trivially reversible change | Compact plan | Valid approval and explicit user choice before action |
+| **M** | All escalation rows `CLEAR`; all M reverse rows `PASS`; bounded multi-file or local behavior change with known dependencies | Brief plan | Valid approval and explicit user choice before action |
+| **L** | Any escalation signal, cross-cutting or sensitive effect, meaningful ambiguity, or non-trivial rollback | Detailed plan | Valid approval required |
 | **XL** | Architecture, migration, new subsystem, major data-flow change, or phased delivery | Design and phases | Valid design/phase approval required |
+
+Risk level sets planning depth, never the approval requirement. Every level needs an
+approval that satisfies Valid Approval and produces an Approval Record before any
+implementation, persistence, or handoff.
 
 Use the highest applicable level. Cosmetic appearance, small diff size, or user urgency never overrides affected-system risk.
 
@@ -373,7 +377,7 @@ Do not treat authorization to inspect, plan, or edit the plan as approval to imp
 - **Conditional Approval** — approval is valid only after every condition is incorporated into a revised canonical Scope Lock and echoed back.
 - **Partial Approval** — only explicitly listed items are approved; all remaining items stay unapproved.
 
-For Level L and XL, no implementation or task-execution preparation may begin before valid approval. A changed condition, phase boundary, or scope requires renewed approval.
+At every risk level, no implementation, persistence, or task-execution preparation may begin before valid approval. A changed condition, phase boundary, or scope requires renewed approval.
 
 ### Partial Approval Result
 
@@ -385,7 +389,7 @@ After partial approval:
 4. prepare no implementation or task for unapproved items.
 
 ````markdown
-## Approval Result Summary
+## Partial Approval Result
 
 Approval Type: partial
 Authorized Action: <Execute Now | Save as CDTask | Return Approved Plan Package to CDF>
@@ -428,7 +432,7 @@ Record every valid approval in this stable shape:
 - Code Changes Authorized In This Turn: <Yes only for standalone Execute Now; otherwise No>
 ```
 
-In `cdf-managed`, the only valid action is `Approve plan and continue CDF flow` (or an unambiguous equivalent identifying the displayed scope). Do not offer or normalize managed approval into `Execute Now`.
+In `cdf-managed`, the only valid action is `Return Approved Plan Package to CDF`. Record it under that exact name in `User Choice` and `Authorized Action`, including when the user approves with an unambiguous equivalent. Do not offer or normalize managed approval into `Execute Now`.
 
 ### Locked Scope Echo
 
@@ -536,12 +540,29 @@ Phase: <n of N | Not applicable>
 Remaining-Phases: <count or 0>
 Reason: <plain text; required for NOT_APPROVED and BLOCKED>
 Next Owner: <Human approver | CDF>
+Workspace: <absolute workspace path or Unavailable>
+Source-Branch: <current branch or Unavailable>
+Source-Commit: <current commit or Unavailable>
 
 <Development Plan>
 <canonical Scope Lock>
 <Approval Record>
-<Locked Scope Summary or Approval Result Summary>
+<Locked Scope Summary or Partial Approval Result>
 ```
+
+Query the workspace path, current branch, and latest commit when the repository is
+reachable. Write `Unavailable` with no substitute value when it is not. CDF compares
+these against the live repository before handing off and cannot supply them itself.
+
+`Lifecycle Owner`, `Execution by CDP`, and `Code Changes by CDP` are fixed attestations,
+not descriptions of what happened to be true this round. Write them exactly as shown.
+`Execution by CDP: Not authorized` and `Code Changes by CDP: None` are always correct
+here, because managed context forbids both; if either would be untrue, the violation has
+already occurred and must be reported instead of returned as a package.
+
+`Next Owner` is `CDF` on an `APPROVED` return. Never write `Human approver` alongside
+`APPROVED`: CDF reads it as an approval gate left open and returns the package. Use
+`Human approver` only when `NOT_APPROVED` or `BLOCKED` sends the decision back to a person.
 
 | `Planning Status` | Meaning | Required content |
 |---|---|---|

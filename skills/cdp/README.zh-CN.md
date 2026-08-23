@@ -11,17 +11,18 @@ CDP 负责规划和推荐下一步，不是 Runtime Controller、调度器或自
 ## 在 CDF Suite 中的位置
 
 ```text
-CDF — 控制平面、流程协调、人工审批门禁
+CDF — 控制平面、返回路由、交接前置条件
  ↓
 CDP — 需求分析、证据、风险、Scope Lock、计划
  ↓
-Human Plan Approval
+Human Plan Approval — 两种上下文下均由 CDP 执行
  ↓
-Execute Now | CDTask — 将已批准计划转化为任务定义与交接信息
+standalone：  Execute Now | Save as CDTask
+cdf-managed： Return Approved Plan Package to CDF
 ```
 
-- **CDF** 以 managed 模式调用 CDP，并负责后续生命周期。
-- **CDP** 负责规划、风险决策、Scope Lock 和审批材料。
+- **CDF** 以 managed 模式调用 CDP，按契约字段路由返回结果，并执行交接前置条件检查。它不运行审批门禁。
+- **CDP** 负责规划、风险决策、Scope Lock、审批材料，以及人工审批门禁本身 —— 展示计划、判断回复是否构成有效批准、必要时追问。
 - **CDTask** 按需将已批准计划转化为可验证任务定义。
 
 规范 Scope Lock 必须在全部交接中原样复制。`cdf-managed` 模式下，CDP 不调用 CDTask，也不实现代码。
@@ -68,10 +69,12 @@ CDP 使用可检查规则，而不是根据表面观感或 diff 大小判断风�
 
 | 等级 | 判定条件 | 规划控制 |
 |---|---|---|
-| **S** | 单个局部静态目标；升级清单全部 `CLEAR`；S Reverse Check 全部 `PASS` | 精简计划与明确动作选择 |
-| **M** | 单个边界明确且影响已知的流程；升级清单全部 `CLEAR`；M Reverse Check 全部 `PASS` | 基于证据的简短计划与明确动作选择 |
-| **L** | 命中共享、条件、持久化、敏感、生产、集成或证据风险信号 | 详细计划与有效范围审批 |
-| **XL** | 架构、新子系统、重大数据流、迁移或分阶段发布 | 设计、阶段边界与有效审批 |
+| **S** | 单个局部静态目标；升级清单全部 `CLEAR`；S Reverse Check 全部 `PASS` | 精简计划、有效批准与明确动作选择 |
+| **M** | 单个边界明确且影响已知的流程；升级清单全部 `CLEAR`；M Reverse Check 全部 `PASS` | 基于证据的简短计划、有效批准与明确动作选择 |
+| **L** | 命中共享、条件、持久化、敏感、生产、集成或证据风险信号 | 详细计划与有效批准 |
+| **XL** | 架构、新子系统、重大数据流、迁移或分阶段发布 | 设计、阶段边界与有效批准 |
+
+风险等级只决定规划深度，不决定审批要求。任何等级在实现、持久化或交接前都必须获得有效批准并生成 Approval Record。
 
 最终判为 S 或 M 前，必须逐项检查以下强制升级类别：
 
@@ -111,7 +114,7 @@ CDP 支持：
 - **带条件批准（Conditional Approval）** — 先把准确条件写入修订后的规范 Scope Lock。
 - **部分批准（Partial Approval）** — 只批准明确列出的内容，其余全部显示为 `NOT APPROVED — MUST NOT BE IMPLEMENTED / 未批准，不得实施`。
 
-部分批准必须生成完整的获批子集 Scope Lock，并清晰展示 Approved Scope、Unapproved / Remaining 和 Authorized Action。已批准与未批准的措辞都必须原样保留。
+部分批准必须生成完整的获批子集 Scope Lock，并展示 Partial Approval Result，其中包含 Approved Scope、Unapproved / Remaining 和 Authorized Action。已批准与未批准的措辞都必须原样保留，包括上面那行双语状态文本。
 
 ## Execution Context 与交接
 
@@ -145,11 +148,14 @@ Development Plan，然后让我选择下一步动作。
 2. Evidence
 3. Risk Gate Result
 4. Scope Lock
-5. Technical Approach
-6. Risks
-7. Acceptance Criteria
-8. Verification Strategy
-9. Next Action
+5. Change Scope —— `Will Change` 与 `Will Not Change`，逐字取自 Scope Lock
+6. Technical Approach
+7. Risks
+8. Acceptance Criteria
+9. Verification Strategy
+10. Next Action
+
+所有章节在任何风险等级下都必须存在，变化的是深度而不是有无。`Change Scope` 是规范 Scope Lock 的可读投影，不能取代它 —— CDTask 在所有风险等级下都要求该章节，缺失或与规范区块矛盾时会返回 `BLOCKED`。
 
 ## 参考资料
 

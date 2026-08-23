@@ -16,8 +16,9 @@ skills/cdp/
   skill.json
   agents/openai.yaml
   references/requirement-gate.md
-  references/install.md
   references/karpathy-guidelines.md
+  references/boundary-cases.md
+  references/install.md
 ```
 
 Do not add extra documentation inside the skill folder unless it is required by the agent at runtime.

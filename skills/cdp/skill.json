@@ -1,8 +1,8 @@
 {
   "name": "cdp",
   "displayName": "Controlled Development Planning",
-  "description": "A risk-based development workflow Skill for AI Coding Agents. Use when invoked as cdp, $cdp, cdp:, or controlled-development-planning. Clarifies vague requirements before implementation, edits simple changes directly, requires approval for high-risk changes, and requires design first for architecture-level changes.",
-  "version": "1.0.0",
+  "description": "A risk-based development planning Skill for AI Coding Agents. Use when invoked as cdp, $cdp, cdp:, or controlled-development-planning. Clarifies vague requirements, inspects evidence, classifies risk as S/M/L/XL, locks scope, and requires valid human approval before any implementation or persistence.",
+  "version": "1.1.0",
   "author": "webszy",
   "license": "MIT",
   "repository": "https://github.com/webszy/my-skills",
@@ -23,6 +23,7 @@
   "references": [
     "references/requirement-gate.md",
     "references/karpathy-guidelines.md",
+    "references/boundary-cases.md",
     "references/install.md"
   ],
   "install": {

@@ -11,17 +11,18 @@ CDP plans and recommends the next action. It is not a runtime controller, schedu
 ## Position in the CDF Suite
 
 ```text
-CDF — control plane, flow coordination, human approval gates
+CDF — control plane, return routing, handoff preconditions
  ↓
 CDP — requirement analysis, evidence, risk, Scope Lock, plan
  ↓
-Human Plan Approval
+Human Plan Approval — run by CDP in both contexts
  ↓
-Execute Now | CDTask — approved-plan task definition and handoff
+standalone:   Execute Now | Save as CDTask
+cdf-managed:  Return Approved Plan Package to CDF
 ```
 
-- **CDF** invokes CDP in managed mode and owns lifecycle continuation.
-- **CDP** owns planning, risk decisions, Scope Lock, and approval materials.
+- **CDF** invokes CDP in managed mode, routes the return on contract fields, and enforces the handoff preconditions. It does not run the approval gate.
+- **CDP** owns planning, risk decisions, Scope Lock, approval materials, and the human approval gate itself — displaying the plan, judging whether a reply is valid approval, and re-asking when it is not.
 - **CDTask** optionally converts an approved plan into verifiable task definitions.
 
 The canonical Scope Lock is copied verbatim across every handoff. CDP does not call CDTask or implement code in `cdf-managed` context.
@@ -68,10 +69,12 @@ CDP uses checkable rules, not visual impression or diff size.
 
 | Level | Eligibility | Planning control |
 |---|---|---|
-| **S** | One local static target; every escalation row `CLEAR`; every S Reverse Check row `PASS` | Compact plan and explicit action choice |
-| **M** | One bounded flow with known effects; every escalation row `CLEAR`; every M Reverse Check row `PASS` | Brief evidence-backed plan and explicit action choice |
-| **L** | Any shared, conditional, persistent, sensitive, production, integration, or evidence-risk signal | Detailed plan and valid scope approval |
+| **S** | One local static target; every escalation row `CLEAR`; every S Reverse Check row `PASS` | Compact plan, valid approval, and explicit action choice |
+| **M** | One bounded flow with known effects; every escalation row `CLEAR`; every M Reverse Check row `PASS` | Brief evidence-backed plan, valid approval, and explicit action choice |
+| **L** | Any shared, conditional, persistent, sensitive, production, integration, or evidence-risk signal | Detailed plan and valid approval |
 | **XL** | Architecture, new subsystem, major data-flow change, migration, or phased rollout | Design, phase boundary, and valid approval |
+
+Risk level sets planning depth, never the approval requirement. Every level needs a valid approval and an Approval Record before implementation, persistence, or handoff.
 
 Before finalizing S or M, inspect every mandatory escalation category:
 
@@ -109,9 +112,9 @@ CDP supports:
 
 - **Full Approval** — the complete Scope Lock is approved.
 - **Conditional Approval** — exact conditions are first added to a revised canonical Scope Lock.
-- **Partial Approval** — only named items are approved; all remaining items are shown as `NOT APPROVED — MUST NOT BE IMPLEMENTED`.
+- **Partial Approval** — only named items are approved; all remaining items are shown as `NOT APPROVED — MUST NOT BE IMPLEMENTED / 未批准，不得实施`.
 
-A partial approval produces a complete approved-subset Scope Lock and a visible summary of Approved Scope, Unapproved / Remaining, and Authorized Action. Approved and unapproved wording is preserved verbatim.
+A partial approval produces a complete approved-subset Scope Lock and a visible Partial Approval Result showing Approved Scope, Unapproved / Remaining, and Authorized Action. Approved and unapproved wording is preserved verbatim, including the bilingual status line above.
 
 ## Execution Contexts and Handoffs
 
@@ -145,11 +148,14 @@ Expected plan sections:
 2. Evidence
 3. Risk Gate Result
 4. Scope Lock
-5. Technical Approach
-6. Risks
-7. Acceptance Criteria
-8. Verification Strategy
-9. Next Action
+5. Change Scope — `Will Change` and `Will Not Change`, verbatim from the Scope Lock
+6. Technical Approach
+7. Risks
+8. Acceptance Criteria
+9. Verification Strategy
+10. Next Action
+
+Every section is required at every risk level; depth varies, presence does not. `Change Scope` is a readable projection of the canonical Scope Lock and never replaces it — CDTask requires it for all risk levels and reports `BLOCKED` when it is absent or contradicts the canonical block.
 
 ## References
 
