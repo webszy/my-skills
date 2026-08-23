@@ -1,0 +1,6 @@
+interface:
+  display_name: "cdf"
+  short_description: "Plan, approve, execute, or save controlled development work"
+  default_prompt: "Use $cdf to analyze this development request, inspect the repository, classify risk, produce and lock a plan, obtain approval, then execute it or save it as a resumable task."
+policy:
+  allow_implicit_invocation: false

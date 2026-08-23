@@ -1,289 +1,329 @@
 ---
 name: cdf
-description: Assess and coordinate a controlled AI development flow through CDP planning, human approval, and CDTask handoff. Use when the user invokes cdf, /cdf, $cdf, cdf:, or controlled-development-flow, or when a development request needs explicit planning and scope control. CDF v0.1 ends at task-definition handoff, or at approved plan handoff when CDTask is not selected, and does not implement, execute, verify, or review code.
+description: Run a controlled development workflow that understands a development request or PRD, inspects repository evidence, classifies risk, locks scope, obtains explicit human approval, then executes the approved work or saves it as a resumable task. Use when the user explicitly invokes cdf, /cdf, $cdf, cdf:, or controlled-development-flow, or explicitly asks for a controlled development flow.
 ---
 
 # CDF: Controlled Development Flow
 
-## Quick Understanding
+## Purpose
 
-> CDF is the control plane for the CDF Suite: it decides whether a development request enters the controlled flow, routes each component return, and refuses any handoff that lacks completed approval evidence.
+CDF is the single user-facing controlled-development Skill. It owns the complete path from requirement understanding through an approved outcome:
+
+```text
+Requirement / PRD / Development Request
+    -> Understand
+    -> Inspect Evidence
+    -> Assess Risk
+    -> Plan
+    -> Lock Scope
+    -> Human Approval
+    -> Execute Now | Save as Task
+```
 
 **Small changes should be fast. Risky changes should be controlled.**
 
-AI can develop quickly, but the development process must remain controlled. CDF reduces uncontrolled behavior through explicit stages, preserved scope, and human decisions.
+Planning is an internal stage of CDF, not a separate handoff. Saving a task uses the internal post-approval component at [components/cdtask/COMPONENT.md](components/cdtask/COMPONENT.md); that component is not independently invoked or installed.
 
-CDF v0.1 ends after it hands off a CDTask definition or an approved plan package. It is not a runtime, scheduler, executor, verification system, or review system.
+CDF Suite maturity is **v0.1**. This is distinct from the package version recorded in `skill.json`.
 
-## Position in the CDF Suite
-
-```text
-Requirement
-    ↓
-CDF Assessment
-    ↓
-CDP Planning + Human Plan Approval
-    ↓
-CDF Handoff Preconditions
-    ↓
-CDTask Definition, when selected
-    ↓
-Execution (outside CDF v0.1)
-```
-
-| Skill | Role | Output |
-|---|---|---|
-| `cdf` | Control plane, return routing, handoff preconditions | Approved flow handoff |
-| `cdp` | Evidence-based, risk-aware planning, Scope Lock, and the human approval gate | Approved Plan Package |
-| `cdtask` | Approved-plan compilation into verifiable tasks | Handoff-ready Task Definition |
-
-CDF coordinates the flow. It does not replace CDP planning, the CDP approval gate, or CDTask decomposition.
-
-## Responsibilities and Boundaries
+## Ownership and Boundaries
 
 CDF owns:
 
-- flow assessment and coordination;
-- component handoff and return routing;
-- handoff preconditions and approval-evidence enforcement;
-- preservation of approved scope.
+- requirement understanding and decomposition;
+- repository evidence inspection and evidence-gap handling;
+- risk classification;
+- the Development Plan, verification strategy, and rollback plan;
+- the canonical Scope Lock;
+- full, conditional, and partial human approval;
+- the user's `Execute Now` or `Save as Task` decision;
+- implementation and actual verification after execution is authorized;
+- saved-task validation and controlled resume.
 
-CDF does not own:
+CDF does not:
 
-- requirement analysis or technical planning (`cdp`);
-- the human approval gate itself, including plan display, approval-wording judgement, and re-asking (`cdp`);
-- detailed task decomposition (`cdtask`);
-- implementation or code modification;
-- execution or scheduling;
-- implementation verification or review;
-- runtime or lifecycle-state management.
+- modify code or persist a task before valid approval;
+- infer approval from acknowledgement or silence;
+- expand approved scope, perform adjacent cleanup, or add speculative flexibility;
+- treat a planned verification as completed verification;
+- invent a runtime, scheduler, worker assignment system, or automatic review system.
 
-CDF routes on contract fields. It never reads plan prose, task prose, or a reason string to decide what happens next.
+If an explicitly invoked request is purely informational and asks for no development change, answer it normally and state that the controlled development path was not entered.
 
-## Workflow
+## Entry Routes
 
-1. Receive the development requirement and available context.
-2. Decide whether controlled planning is needed.
-3. Send the requirement, constraints, known scope, `Context: cdf-managed`, and `Lifecycle-Owner: cdf` to CDP.
-4. Route the CDP return on `Planning Status`. Only `APPROVED` continues.
-5. Verify every Handoff Precondition. A failed precondition returns the package to CDP.
-6. Apply CDTask Selection. If CDTask is selected, confirm it is available and send the approved package; otherwise go to step 8.
-7. Route the CDTask return on `Tasking Status`.
-8. Return the handoff-ready Task Definition, or the approved plan package, to a human or another authorized agent.
-9. If `Remaining-Phases` is greater than zero, return to step 3 for the next phase. Otherwise stop and state that execution is outside CDF v0.1.
+### New Development Request
 
-Do not enter the controlled flow for a purely informational request or a request that needs no development planning. Route or answer it normally.
+Run the complete workflow. A request to turn a PRD, requirement document, or idea into tasks does not bypass analysis: it must pass requirement understanding, evidence inspection, risk classification, planning, Scope Lock, and approval before task compilation.
 
-### CDP Return Routing
+### Continue a Saved Task
 
-| `Planning Status` | CDF action |
+For `$cdf continue task <path>` or an equivalent natural-language request, follow [Resume a Saved Task](#resume-a-saved-task). Do not treat the saved document as self-authorizing.
+
+## Controlled Development Workflow
+
+### 1. Requirement Gate
+
+Confirm the desired outcome, observable behavior, target repository or area, included and excluded scope, constraints, and acceptance criteria. Confirm that any named target exists before planning a modification.
+
+Read [references/requirement-gate.md](references/requirement-gate.md) when the request is vague, incomplete, risky, specification-like, or likely to hide cross-cutting effects. Ask only questions whose answers can change implementation meaning, risk, scope, interfaces, data, state, or acceptance. Safe defaults must be explicit, narrow, reversible, and accepted by the user; they never bypass sensitive decisions.
+
+If a named target does not exist, do not silently create or redirect it. Ask whether the intended action is creation, rename, or work on a different target.
+
+### 2. Requirement Understanding
+
+Separate the request into independently verifiable requirements. Record:
+
+- confirmed desired behavior;
+- constraints and explicit non-goals;
+- dependencies and likely affected areas;
+- material assumptions;
+- open questions that still affect implementation.
+
+Do not silently choose product behavior when multiple material interpretations remain.
+
+### 3. Evidence Inspection
+
+Inspect the smallest sufficient set of relevant code, configuration, tests, documentation, schemas, generated artifacts, and call sites. For each material conclusion, distinguish:
+
+- **Fact** — directly supported by inspected evidence;
+- **Inference** — reasoned from facts;
+- **Assumption** — not yet verified and relevant to approval.
+
+Prefer repository evidence over intuition. Keep inspection proportional to the plausible risk, but do not classify on visible diff size alone. Capture the absolute workspace path, source branch, source commit, and whether relevant tracked or untracked worktree changes exist when available; otherwise record `Unavailable` and why.
+
+### 4. Risk Gate
+
+Read [references/risk-classification.md](references/risk-classification.md) before final classification. Assess all six dimensions:
+
+- impact;
+- blast radius;
+- reversibility;
+- uncertainty;
+- sensitivity;
+- coordination requirements.
+
+Complete the Mandatory Signal Record with `CLEAR`, `HIT`, or `UNKNOWN` and evidence for every row:
+
+| ID | Signal |
 |---|---|
-| `APPROVED` | Continue to the Handoff Preconditions |
-| `NOT_APPROVED` | Report `Reason`, produce no handoff, and end the round as terminated rather than completed |
-| `BLOCKED` | Report `Reason` verbatim and end the round. Do not send it back to CDP; CDP issued it |
-| missing, unreadable, or unrecognized | Treat as blocked, name the missing field, and end the round |
+| ESC-01 | Shared components, primitives, tokens, styles, or global state |
+| ESC-02 | Conditional rendering, feature gates, entitlements, permissions, or user-specific behavior |
+| ESC-03 | Persistent data writes/deletes, schema, migration, backfill, or user data |
+| ESC-04 | Billing, payments, subscriptions, pricing, authentication, or authorization |
+| ESC-05 | Reports, analytics, telemetry, revenue/cost/ROI, or business metrics |
+| ESC-06 | Cache, jobs, sync, queues, retries, idempotency, events, webhooks, or consumers |
+| ESC-07 | Internationalization, accessibility, compliance, security, privacy, or observability |
+| ESC-08 | Application, deployment, environment, or production configuration |
+| ESC-09 | Third-party APIs, external contracts, static delivery, or release packaging |
+| ESC-10 | Architecture, new module/service, major redesign, migration coordination, or phased rollout |
+| ESC-11 | Evidence is insufficient to bound a higher plausible risk |
+| ESC-12 | Evidence materially conflicts about scope, behavior, ownership, risk, or impact |
 
-If `Risk Level` differs from the previous round for the same requirement, CDP has reclassified. Discard the previously displayed plan and any approval obtained for it, and treat the return as a fresh round.
+Signals are evidence and may impose a risk floor; a signal is not the final risk by itself. In particular, a bounded shared component change, a small analytics event, bounded configuration, or bounded external-integration usage does not automatically require Level L. Use the impact-specific floors in the reference and the highest level supported by the combined evidence.
 
-### CDTask Return Routing
-
-| `Tasking Status` | `Blocked-Reason-Class` | CDF action |
+| Level | Typical boundary | Planning depth |
 |---|---|---|
-| `READY` | — | Continue to step 8 |
-| `NOT_READY` | — | Return to CDTask for repair inside approved scope, then re-evaluate |
-| `BLOCKED` | `approval` or `scope-lock` | A precondition CDF must enforce has failed. Re-run the Handoff Preconditions, and return the package to CDP if the defect is in the package |
-| `BLOCKED` | `requires-new-scope` or `partial-remainder` | Return to CDP for replanning and renewed approval, then restart at step 4 |
-| `BLOCKED` | `ambiguity` | Return the package to CDP for correction and report the blocker to the user |
-| `BLOCKED` | missing or unrecognized | Report to the user and end the round |
+| **S** | One local cosmetic or static change; no behavioral or shared impact | Compact |
+| **M** | Bounded local behavior, small shared-component change, bounded configuration, or bounded external-integration usage | Brief, evidence-backed |
+| **L** | Cross-cutting behavior, persistent data, billing, auth, security, privacy, materially meaningful analytics, meaningful external contracts, or non-trivial rollback | Detailed with rollback |
+| **XL** | Architecture, new subsystem/service, migration, major data-flow redesign, phased rollout, or multi-system coordination | Design and approved phases |
 
-## Operating Context
+Before Level S, complete the S Reverse Check. Before Level M, complete the M Reverse Check. An unresolved `UNKNOWN` forbids a level below the lowest plausible risk; if a safe bounded plan cannot be produced, stop as `BLOCKED`. An unresolved conflict that changes implementation meaning, scope, acceptance, or safety is also `BLOCKED`.
 
-CDF invokes CDP in `cdf-managed` context. This means:
+### 5. Development Plan and Scope Lock
 
-- CDP may inspect evidence and prepare planning artifacts;
-- CDP runs the human approval gate and returns its outcome to CDF;
-- CDP must not call CDTask or implement code in this context;
-- CDF decides whether the approved plan proceeds to CDTask.
+Use the lightest plan that safely captures the evidence, risk, scope, implementation direction, and verification. Every approval-ready plan contains:
 
-CDF invokes CDTask only with an approved managed handoff. CDTask returns task-definition readiness to CDF and does not continue into execution.
+```markdown
+## Development Plan
 
-## Key Gates and Contracts
+### Requirement Understanding
+<outcome, behavior, decomposition, constraints, and non-goals>
 
-### Handoff Preconditions
+### Evidence
+<facts, sources, inferences, assumptions, gaps, and conflicts>
 
-CDP owns the approval gate. CDF enforces it at the handoff boundary through field checks only, never through a judgement about wording or intent. Before step 6, confirm:
+### Risk Gate Result
+- Final Level: <S | M | L | XL>
+- Dimensions: <impact, blast radius, reversibility, uncertainty, sensitivity, coordination>
+- Mandatory Signals: <record or compact all-clear summary with evidence>
+- Reverse Check: <S | M | Not Applicable>
+- Rationale: <evidence-backed reason>
 
-- `Contract-Version: cdp-cdf/v1` is present and recognized;
-- `Planning Status` is `APPROVED`;
-- an Approval Record exists with `Scope Approved: Yes`;
-- the Approval Record states `Code Changes Authorized In This Turn: No`;
-- a canonical `cdp-scope/v1` block exists with all eight arrays populated;
-- `Risk Level` is Level S, Level M, Level L, or Level XL;
-- a Partial Approval Result is present when `Approval Type` is `partial`;
-- `Phase` and `Remaining-Phases` are present or `Not applicable`;
-- workspace, branch, and commit metadata are present or explicitly `Unavailable`.
+### Scope Lock
+<complete canonical cdf-scope/v1 block>
 
-Any failed condition returns the package to CDP. Do not repair it, do not supply a missing field, and do not proceed on a package that is merely close enough.
+### Technical Approach
+<smallest viable implementation direction>
 
-Approval confirms direction and scope. It does not authorize CDF to implement or execute anything.
+### Implementation Plan
+<ordered changes and dependency boundaries>
 
-### Scope Lock Preservation
+### Risks and Rollback
+<material risks, mitigations, stop conditions, and rollback; concise when not applicable>
 
-The approved plan must contain `Scope-Lock-Version: cdp-scope/v1` with:
+### Acceptance Criteria
+<observable results aligned with the Scope Lock>
 
-- `in_scope`
-- `out_of_scope`
-- `non_goals`
-- `assumptions`
-- `stop_conditions`
-- `will_change`
-- `will_not_change`
-- `acceptance_criteria`
+### Verification Strategy
+<checks to run if execution is authorized>
 
-Treat the canonical block as an opaque payload. Copy it byte for byte from CDP to CDTask: do not paraphrase, reorder, merge, omit, weaken, expand, re-indent, normalize quoting, or re-wrap a line. After copying, read the copy back and compare it with the source. If they differ, discard the copy and repeat. Never hand off a block that failed comparison, and never rely on CDTask to detect the difference.
-
-For partial approval:
-
-- preserve CDP's Partial Approval Result;
-- pass only the canonical approved-subset Scope Lock;
-- require `Approved Items` to match `in_scope` verbatim;
-- keep every `Unapproved Items` entry explicitly excluded;
-- prepare no task for the unapproved remainder.
-
-The unapproved remainder has no owner in this round. State it in the terminal report, mark it as not carried forward, and require a new CDP round for any part of it.
-
-If Scope Lock is missing, conflicting, inconsistent, or too narrow for the requested tasking, do not invoke CDTask. Return to CDP for replanning and renewed approval.
-
-### Risk-Level Routing
-
-Route on the `Risk Level` field, never on how small a change looks.
-
-| Risk Level | Coordination depth | CDTask default |
-|---|---|---|
-| Level S | Pass CDP's compact package through with minimal coordination | Not selected |
-| Level M | Brief coordination summary | Not selected |
-| Level L | Full package with risks, rollback, and verification | Selected |
-| Level XL | Full package plus phase tracking | Selected |
-
-Risk level never changes the approval requirement. Every level requires a completed CDP approval gate and a valid Approval Record before handoff.
-
-### CDTask Selection
-
-CDTask is optional. Select it when the approved work:
-
-- needs persistence or later resumption;
-- needs explicit task decomposition;
-- is large, phased, or multi-contributor;
-- should separate planning from implementation.
-
-Otherwise the Approved Plan Package is the terminal output. Do not create a task definition for work that gains nothing from one.
-
-If CDTask is selected but unavailable, do not fabricate a task definition, write a fallback file, or install anything. Output this command verbatim and stop until the user confirms installation:
-
-```bash
-npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
+### Next Action
+1. Execute Now
+2. Save as Task
 ```
 
-The command must name `--skill cdtask`. Never invent a repository, package name, or path.
+For Level L, name affected modules, ordered changes, regression risk, and rollback. For Level XL, also include the current architecture, proposed design, data/API/state flow, delivery phases, and the exact phase boundary awaiting approval.
+
+For Level M, L, and XL, read [references/karpathy-guidelines.md](references/karpathy-guidelines.md) before finalizing the plan or implementing. For Level S, read it only when a prior attempt failed or extra minimal-change guidance is objectively useful.
 
 ### Phased Delivery
 
-A Level XL plan may be approved one phase at a time. `Phase` and `Remaining-Phases` in the CDP return say where the flow is. Each phase is a separate round with its own plan display, approval, Scope Lock, and handoff.
+Treat each approved Level XL phase as a separate controlled round with its own Development Plan boundary, canonical Scope Lock, Approval Record, and selected Next Action. Approval of one phase never authorizes a later phase. After executing or saving the approved phase, stop or return to planning for the next phase; do not carry scope or authorization forward implicitly.
 
-Do not stop while `Remaining-Phases` is greater than zero, and do not carry one phase's approval into the next.
+### Canonical Scope Lock
 
-### Loop Budgets
+Every plan must contain exactly one canonical block:
 
-- CDP replanning: at most 3 rounds for the same requirement.
-- CDTask repair or replanning: at most 2 rounds for the same defect.
-
-Record what changed each round. The same problem returning twice goes to the user with the difference between rounds, regardless of remaining budget. A round that changes nothing is a stall, not a round.
-
-### Repository Drift
-
-`Source-Branch` and `Source-Commit` arrive with the approved package. Compare them with the current repository state before step 6. If either differs, the approval was made against different code: return to CDP for revalidation instead of handing off. If they are `Unavailable`, state that drift could not be checked.
-
-### Flow State
-
-Print the Flow State block from [references/flow-contracts.md](references/flow-contracts.md) before and after every handoff so a human can resume an interrupted session.
-
-CDF holds no persistent state. The block is a readable checkpoint, not a state file. Do not write it to disk and do not treat it as runtime state.
-
-### Internal Handoff Formats
-
-- CDF → CDP: `Context: cdf-managed` and `Lifecycle-Owner: cdf`.
-- CDP → CDF: `Contract-Version: cdp-cdf/v1` with `Planning Status`, `Risk Level`, `Phase`, `Remaining-Phases`, and `Reason`.
-- CDF → CDTask: `Contract-Version: cdf-cdtask/v1`, `Handoff-Type: managed-tasking`, `Approval-State: plan-approved`, `Execution-Owner: cdf`, supported `Risk-Level`, and available workspace/branch/commit metadata.
-- CDTask → CDF: `Contract-Version: cdf-cdtask/v1` with `Tasking Status` and, when blocked, `Blocked-Reason-Class`.
-
-[references/flow-contracts.md](references/flow-contracts.md) holds the full field definitions. If a required field is missing or unrecognized, treat the return as blocked, name the field, and stop.
-
-These are internal CDF v0.1 Skill handoff formats, not public runtime protocols.
-
-## Outputs and Handoffs
-
-CDF sends CDP:
-
-- original requirement and relevant context;
-- user constraints and known scope boundaries;
-- `cdf-managed` lifecycle ownership.
-
-CDF expects an `APPROVED` CDP return to contain:
-
-- requirement understanding and technical analysis;
-- evidence-backed implementation plan;
-- risk level, material risks, and assumptions;
-- acceptance criteria and verification strategy;
-- canonical approved Scope Lock;
-- Approval Record and the applicable Locked Scope Summary or Partial Approval Result.
-
-A `NOT_APPROVED` or `BLOCKED` return carries `Reason` and no plan content. Absent sections are expected there, not a defect.
-
-CDF sends CDTask only the approved package. CDTask determines task structure and dependencies without changing implementation meaning.
-
-The CDF v0.1 terminal output is a handoff-ready Task Definition, or the Approved Plan Package when CDTask is not selected, plus an explicit statement that execution remains outside CDF.
-
-## References and Usage
-
-- [Flow Contracts](references/flow-contracts.md) — full field definitions for the four handoff directions, status semantics, and the Flow State block.
-
-Read it when composing or validating a handoff. If it is unavailable, continue with this Skill as the source of truth and mention the missing supporting reference.
-
-Use CDF when a development request needs controlled planning, explicit scope, or a human plan decision. A typical invocation is:
-
-```text
-Use CDF to assess this requirement, obtain an approved CDP plan, and prepare a CDTask handoff.
+```yaml
+Scope-Lock-Version: cdf-scope/v1
+in_scope:
+  - <approved outcome or impact>
+out_of_scope:
+  - <explicit exclusion>
+non_goals: []
+assumptions: []
+stop_conditions: []
+will_change:
+  - <approved affected area>
+will_not_change:
+  - <protected area or behavior>
+acceptance_criteria:
+  - <observable result>
 ```
 
-Keep coordination concise. Let CDP provide technical depth and CDTask provide task-definition detail.
+All eight fields must exist. Empty arrays are valid when there is no meaningful content; never invent filler merely to populate them. Before approval the block may be revised visibly. After approval it is canonical immutable data:
+
+- copy it verbatim to an internal task handoff or saved task;
+- do not paraphrase, reorder, merge, omit, weaken, expand, re-indent, normalize, or silently add scope;
+- treat `out_of_scope`, `non_goals`, and `will_not_change` as hard constraints;
+- if execution or task compilation requires any change, return to planning, create a revised block, and obtain renewed approval.
+
+### 6. Human Approval
+
+Approval is required for every risk level. It is valid only when the user identifies both:
+
+1. the plan, Scope Lock, phase, or explicit subset being approved; and
+2. the authorized action: `Execute Now` or `Save as Task`.
+
+Valid examples:
+
+- `Approve this plan and execute it.`
+- `批准以上 Scope Lock，保存为任务。`
+- `Approve Phase 1 only and execute it.`
+
+Replies such as `ok`, `继续`, `可以`, `looks good`, or silence are not sufficient when the authorized action or approved scope is unclear. Ask for an explicit choice without exposing internal contract language. Re-ask at most twice for the unchanged plan; if approval remains ambiguous or is declined, stop without modifying code or saving a task.
+
+Approval modes:
+
+- **Full** — the complete Scope Lock and selected action are approved.
+- **Conditional** — incorporate every condition into a revised Scope Lock, show it, and obtain explicit approval of that revision.
+- **Partial** — create a complete canonical block for only the approved subset; preserve every unapproved item verbatim and explicitly exclude it.
+
+If a partial subset cannot be isolated without a new implementation decision, semantic rewrite, or unsafe coupling, return to planning or remain `BLOCKED`.
+
+Record valid approval:
+
+```markdown
+## Approval Record
+- User Approval: <verbatim approval statement>
+- Approval Context: <ISO-8601 timestamp when available, otherwise current conversation turn>
+- User Choice: <Execute Now | Save as Task>
+- Approval Type: <full | conditional | partial>
+- Approved Items: <canonical in_scope items or exact subset>
+- Conditions Added To Scope Lock: <none or exact conditions>
+- Unapproved Items: <none or exact remainder>
+- Scope Approved: Yes
+- Code Changes Authorized In This Turn: <Yes for Execute Now; No for Save as Task>
+```
+
+Echo the locked scope and selected action after approval. The echo confirms the decision; it cannot broaden it.
+
+### 7A. Execute Now
+
+After valid approval explicitly authorizes `Execute Now`:
+
+1. compare the current repository branch and commit with the planning evidence when available;
+2. re-check assumptions, stop conditions, protected areas, and the approved phase boundary;
+3. implement only the canonical approved scope;
+4. run only the verification appropriate to the approved change;
+5. report changed files, observable results, checks actually run, failures, and any unverified criteria.
+
+Do not perform unrelated refactors, cleanup, dependency additions, broad reformatting, public-interface changes, or protected-area edits. Remove only artifacts made obsolete by the approved change itself.
+
+Stop immediately and return to planning when new evidence changes scope, risk, implementation meaning, acceptance criteria, rollback, or a material assumption. Update the Development Plan and Scope Lock and request renewed approval before continuing.
+
+Never describe a planned check as completed. A failed check may be repaired only inside approved scope; otherwise stop and replan.
+
+### 7B. Save as Task
+
+After valid approval explicitly authorizes `Save as Task`:
+
+1. read [references/task-handoff.md](references/task-handoff.md);
+2. create the internal `cdf-cdtask/v1` approved handoff;
+3. read and enter [components/cdtask/COMPONENT.md](components/cdtask/COMPONENT.md);
+4. validate approval and the canonical Scope Lock;
+5. compile dependency-aware tasks and run the Scope Guard;
+6. persist the resumable document;
+7. read it back and validate its contract and canonical blocks;
+8. return the saved path and stop.
+
+The default destination is:
+
+```text
+<Workspace>/_cdtask/YYYY-MM-DD-<short-slug>.md
+```
+
+The internal component is already part of CDF. Do not request a separate installation and do not expose it as a Next Action. For a request whose desired deliverable is a task breakdown, `Save as Task` is the action that produces that durable definition; `Execute Now` means implementing the approved underlying development work, not returning an unsaved task list. If task compilation discovers ambiguity, new scope, a changed acceptance criterion, an insufficient Scope Lock, or an inseparable partial remainder, it returns `BLOCKED`; CDF must re-enter planning, revise the plan and Scope Lock, and obtain renewed approval.
+
+## Resume a Saved Task
+
+For an explicit continue request:
+
+1. read the task document from the supplied path;
+2. require `task_contract: cdf-cdtask/v1` and validate every required section;
+3. recompute SHA-256 over the exact canonical Scope Lock and Approval Record bytes and require both values to match the persisted integrity fields;
+4. inspect the current workspace, branch, commit, relevant code, and dependencies for material drift;
+5. re-check assumptions, stop conditions, phase boundaries, partial-approval exclusions, acceptance criteria, and verification obligations;
+6. decide whether the approved implementation meaning is still valid.
+
+Reject a missing, legacy, or unrecognized task contract without modifying code.
+
+Material drift, a failed assumption, new scope, changed risk, or changed acceptance returns to planning and renewed approval. Do not execute a stale task.
+
+When the task remains valid, the user's explicit `continue task <path>` request authorizes execution of that saved approved scope in the current turn. Execute tasks in dependency order under the same guardrails as `Execute Now`. A request merely to inspect, summarize, or validate a task does not authorize execution.
+
+## Repository Drift
+
+Capture `Workspace`, `Source-Branch`, `Source-Commit`, and relevant worktree state in approved task handoffs when available. Re-check committed and uncommitted state immediately before execution, before persistence, and on resume. A branch, commit, or dirty-state difference is a drift signal, not automatically material; inspect whether it changes approved implementation meaning, affected files, assumptions, risk, or acceptance. Material drift requires replanning and renewed approval. If traceability is unavailable, disclose the gap and apply the uncertainty rules from the Risk Gate.
+
+## References
+
+- [Requirement Gate](references/requirement-gate.md) — read for ambiguous, risky, PRD-like, or specification-like requests.
+- [Risk Classification](references/risk-classification.md) — read before final risk classification.
+- [Karpathy Guidelines](references/karpathy-guidelines.md) — read for Level M/L/XL planning and implementation.
+- [Boundary Cases](references/boundary-cases.md) — read when a request, approval, evidence conflict, or partial scope is near a control boundary.
+- [Task Handoff](references/task-handoff.md) — read only for `Save as Task` or saved-task resume.
+- [Internal Task Compiler](components/cdtask/COMPONENT.md) — enter only after approved `Save as Task`.
 
 ## Non-Negotiable Rules
 
-- Do not implement or modify code.
-- Do not execute development tasks.
-- Do not review implementation.
-- Do not skip CDP, and do not hand off without a valid Approval Record.
-- Do not judge whether a user reply is valid approval; that gate belongs to CDP.
-- Do not route on plan prose, task prose, or a reason string; route only on contract fields.
-- Do not invoke CDTask while material decisions remain unresolved.
-- Do not expand approved scope.
-- Do not invent missing planning decisions or supply a missing contract field.
-- Do not replace CDP or CDTask responsibilities.
-- Do not claim runtime, event-system, public schema-protocol, CLI, executor, verification, or review capability.
-- End after task-definition handoff, or after the approved plan package when CDTask is not selected.
-
-## Future Extensions
-
-These are not CDF v0.1 capabilities. Do not invoke, simulate, or depend on them.
-
-### Near Future
-
-- CDRunner
-- CDReview
-
-### Long Term
-
-- CDF Runtime
-- public or runtime Protocol Schema
-- event-driven coordination
-- CLI support
+- CDF is the only user-facing controlled-development entrypoint.
+- Complete requirement analysis, repository evidence inspection, risk classification, planning, Scope Lock, and human approval before any implementation or task compilation.
+- Never infer action or scope approval from an ambiguous acknowledgement.
+- Never expand or rewrite approved scope.
+- Never let the internal task compiler make product, architecture, risk, scope, or approval decisions.
+- Never continue after material drift or new evidence invalidates the approved plan.
+- Never claim verification that was not actually performed.
+- Keep planning proportional: concise for small changes, thorough for risky or architectural work.

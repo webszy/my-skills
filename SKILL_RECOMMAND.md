@@ -10,8 +10,7 @@
 
 | Skill 名 | 安装命令 | 简单说明 |
 |---|---|---|
-| `cdf` | `npx skills add webszy/my-skills --skill cdf` | Use when the user invokes cdf, $cdf, cdf:, or controlled-development-flow, or when Codex or Claude needs to clarify vague requirements befor…                                                                         |
-| `cdtask` | `npx skills add webszy/my-skills --skill cdtask` | Use this skill when the user wants to split an existing requirement document, PRD, technical proposal, implementation plan, or approved CDF …                                                                         |
+| `cdf` | `npx skills add webszy/my-skills --skill cdf` | Controlled development flow that inspects requirements and repository evidence, classifies risk, locks scope, obtains approval, then executes or saves a resumable task. |
 | `find-skills` | `npx skills add vercel-labs/skills --skill find-skills` | Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can…                                                                         |
 | `karpathy-guidelines` | `npx skills add forrestchang/andrej-karpathy-skills --skill karpathy-guidelines` | Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make…                                                                         |
 | `sigma` | `npx skills add sanyuan0704/sanyuan-skills --skill sigma` | Personalized 1-on-1 AI tutor using Bloom's 2-Sigma mastery learning. Guides users through any topic with Socratic questioning, adaptive paci…                                                                         |
@@ -61,7 +60,7 @@
 
 ## 统计
 
-- 分类后共 35 条安装记录：理论与方法论类 10 条、编程语言与应用开发类 12 条、SDK/云平台与外部集成类 13 条。
+- 分类后共 34 条安装记录：理论与方法论类 9 条、编程语言与应用开发类 12 条、SDK/云平台与外部集成类 13 条。
 - 其中两个大型仓库的同源 Skill 已分别折叠为一条仓库级记录。
 - `swift-ios-skills` 远端共 86 个 Skill，本机覆盖 84 个，缺少 2 个。
 - `larksuite/cli` 远端共 28 个 `lark-*` Skill；本机有 27 个，其中匹配 26 个、缺少 2 个，另有 1 个本机旧项。

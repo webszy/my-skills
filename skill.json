@@ -1,7 +1,7 @@
 {
   "name": "my-skills",
   "displayName": "Webszy Skills",
-  "description": "A collection of AI coding agent skills maintained by webszy, including the evolving Controlled Development Flow suite for controlled planning and tasking workflows.",
+  "description": "A collection of AI coding agent skills maintained by webszy, including CDF: a controlled AI development workflow for analysis, planning, approval, execution, and resumable tasking.",
   "version": "1.1.0",
   "author": "webszy",
   "license": "MIT",
@@ -23,35 +23,13 @@
     {
       "name": "cdf",
       "displayName": "Controlled Development Flow",
-      "description": "Orchestrates controlled AI-assisted development lifecycle gates and the implemented planning-to-tasking flow.",
+      "description": "Controlled AI development workflow that analyzes requirements and repository evidence, classifies risk, locks scope, obtains human approval, then executes the approved work or saves it as a resumable task.",
       "path": "skills/cdf",
       "platforms": [
         "codex",
         "claude-code"
       ],
       "install": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y"
-    },
-    {
-      "name": "cdp",
-      "displayName": "Controlled Development Planning",
-      "description": "Evidence-based, risk-aware development planning with standalone and CDF-managed workflows.",
-      "path": "skills/cdp",
-      "platforms": [
-        "codex",
-        "claude-code"
-      ],
-      "install": "npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y"
-    },
-    {
-      "name": "cdtask",
-      "displayName": "Controlled Development Task",
-      "description": "Converts approved plans and stable requirements into scoped, dependency-aware, verifiable execution units.",
-      "path": "skills/cdtask",
-      "platforms": [
-        "codex",
-        "claude-code"
-      ],
-      "install": "npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y"
     }
   ]
 }

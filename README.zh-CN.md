@@ -1,48 +1,60 @@
 # 水煮鱼 Skill
 
-本合集包含持续演进的 Controlled Development Flow Suite，用于受控的规划与任务化流程，同时也收录其它 AI Coding Agent Skills。
+本合集包含受控 AI 开发工作流 CDF，以及其它 AI Coding Agent Skills。
 
-当前已可用的 CDF Suite 路径是：
+## CDF Suite
+
+CDF Suite 现在只有一个面向用户的 Skill：**CDF**。
+
+CDF 会分析需求与仓库证据、判断风险、生成并锁定开发计划、要求人工批准，然后执行已批准的工作，或将其编译为可恢复任务。
 
 ```text
-Requirement → CDF → CDP → CDF → CDTask → CDF → READY_TO_EXECUTE
+Requirement / PRD / Development Request
+    -> CDF
+    -> Requirement Understanding
+    -> Evidence Inspection
+    -> Risk Classification
+    -> Development Plan
+    -> Scope Lock
+    -> Human Approval
+    -> Execute Now | Save as Task
 ```
 
-# cdf
+CDTask 是 CDF 的内部 component，仅在已批准计划选择保存为任务后使用。它不单独安装，也不单独调用。
 
-`cdf` 是负责生命周期状态转换的控制平面 Skill，编排 managed planning-to-tasking 流程。当前集成在 execution runtime 之前停止。
+查看说明：
 
-查看完整说明：[skills/cdf/SKILL.md](skills/cdf/SKILL.md)
+- [CDF Skill](skills/cdf/SKILL.md)
+- [CDF 中文 README](skills/cdf/README.zh-CN.md)
+
+安装到 Codex：
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -g -y
+```
+
+安装到 Claude Code：
+
+```bash
+npx skills add https://github.com/webszy/my-skills --skill cdf -a claude-code -g -y
+```
+
+同时安装：
 
 ```bash
 npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y
 ```
 
-# cdp
+### 版本语义
 
-`cdp` 是 `controlled-development-planning` 的简称，提供基于证据、风险感知的 standalone 与 CDF-managed 开发规划工作流。
+- **CDF Suite maturity：** v0.1
+- **Skill package version：** 1.1.0
 
-查看完整说明：[skills/cdp/README.zh-CN.md](skills/cdp/README.zh-CN.md)
+两者是不同的版本体系：maturity 表示 CDF 架构成熟度，package version 表示可分发版本。本次重构保持现有 package version。
 
 合集元数据：[skill.json](skill.json)
 
-Skill 元数据：[skills/cdp/skill.json](skills/cdp/skill.json)
-
-```bash
-npx skills add https://github.com/webszy/my-skills --skill cdp -a codex -a claude-code -g -y
-```
-
-# cdtask
-
-`cdtask` 将稳定需求、已批准的 standalone CDP 交接包或 CDF-managed approved Plan，转化为边界清晰、依赖明确、可验证的执行单元。它可以按需持久化任务，但自身不实现或调度代码。
-
-查看完整说明：[skills/cdtask/SKILL.md](skills/cdtask/SKILL.md)
-
-```bash
-npx skills add https://github.com/webszy/my-skills --skill cdtask -a codex -a claude-code -g -y
-```
-
-# app-analytics-audit-flow
+## app-analytics-audit-flow
 
 `app-analytics-audit-flow` 是一个 code-first 的移动 App 增长、变现、订阅、归因、商店和稳定性分析 Skill。
 
