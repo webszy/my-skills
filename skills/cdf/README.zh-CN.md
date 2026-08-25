@@ -48,11 +48,10 @@ Workspace: <absolute path>
 Source-Branch: <branch>
 Source-Commit: <commit>
 Source-Worktree-State: <clean | dirty | Unavailable>
-Source-Worktree-Changes:
-- <stable git status entry for a relevant path>
+Source-Worktree-Changes: <[] | [Unavailable] | [' M src/foo.ts', '?? src/new-file.ts']>
 ```
 
-`Source-Worktree-Changes` 只记录与已批准、受影响或受保护区域有关的 tracked/untracked 路径。Worktree 干净时使用空列表；状态不可用时记录原因。Dirty 状态是证据与漂移信号，但不会自动证明风险或漂移具有实质影响。
+`Source-Worktree-Changes` 统一使用 flow-style YAML 数组，只记录与已批准、受影响或受保护区域有关的 tracked/untracked 路径。Dirty 条目必须加引号，完整保留 Git `XY` 两个字符及前导空格；没有相关改动时使用 `[]`，状态不可用时使用 `[Unavailable]` 并记录原因。Dirty 状态是证据与漂移信号，但不会自动证明风险或漂移具有实质影响。
 
 ### 风险分级
 
@@ -65,7 +64,7 @@ S/M/L/XL 风险模型保持不变。风险根据影响、爆炸半径、可逆�
 | **L** | 跨域行为、持久化数据、计费、认证、安全、隐私、具有重要业务含义的分析、重要外部契约或非平凡回滚 |
 | **XL** | 架构、新子系统/服务、迁移、重大数据流重构、分阶段发布或多系统协作 |
 
-风险信号提供证据并可能设定风险下限，但不自动等于最终等级。Level S 必须通过 S Reverse Check，Level M 必须通过 M Reverse Check。未解决的 `UNKNOWN` 禁止采用低于最低合理风险的等级。CDF 无法生成安全且边界明确的计划，或冲突证据会改变含义、范围、验收或安全性时，必须停止为 `BLOCKED`。
+风险信号提供证据并可能设定风险下限，但不自动等于最终等级。CDF 先执行 `SKILL.md` 中的紧凑 S Reverse Check；明确属于 Level S 时不加载完整风险参考。任一 S 条件失败、未知或出现可能的非 S 类别时，才加载 `risk-classification.md` 及完整 signal record。未解决的 `UNKNOWN` 禁止采用低于最低合理风险的等级。CDF 无法生成安全且边界明确的计划，或冲突证据会改变含义、范围、验收或安全性时，必须停止为 `BLOCKED`。
 
 规划深度随等级变化。Level S 使用下面的快速路径；Level M、L 和 XL 使用完整 Development Plan。
 
@@ -89,7 +88,7 @@ Approve and execute? Or save as task?
 
 ### Development Plan 合同
 
-Level M、L 和 XL 的每个可审批 Development Plan 都按以下顺序使用规范标题：
+Level M、L 和 XL 的每个可审批完整 Development Plan，以及为 **Save as Task** 提升的 Level S 计划，都按以下顺序使用规范标题：
 
 1. `Requirement Understanding`
 2. `Evidence Summary`
@@ -103,11 +102,11 @@ Level M、L 和 XL 的每个可审批 Development Plan 都按以下顺序使用�
 10. `Verification Strategy`
 11. `Next Action`
 
-Handoff 或已保存任务会直接携带这些标题，不得重命名、合并、拆分或重新生成。Level S 改用快速路径，只有在为 **Save as Task** 提升为完整计划时才采用这些标题。Level M 的 `Rollback Plan` 可以很简洁；Level L 和 XL 则必须包含 [SKILL.md](SKILL.md) 规定的额外细节。
+Handoff 或已保存任务会直接携带这些标题，不得重命名、合并、拆分或重新生成。Level S 改用快速路径，只有在为 **Save as Task** 提升为完整计划时才采用这些标题。Level S 或 M 的 `Rollback Plan` 可以很简洁，或在确实不适用时使用 `None`；Level L 和 XL 则必须包含 [SKILL.md](SKILL.md) 规定的额外细节。
 
 ### Scope Lock 与验收授权源
 
-Level M 及以上的每个可审批计划都包含且只包含一个规范 `cdf-scope/v1` 区块，并按以下顺序具备八个字段：
+每个可审批完整计划都包含且只包含一个规范 `cdf-scope/v1` 区块，包括为 **Save as Task** 提升的 Level S 计划，并按以下顺序具备八个字段：
 
 - `in_scope`
 - `out_of_scope`
@@ -118,7 +117,7 @@ Level M 及以上的每个可审批计划都包含且只包含一个规范 `cdf-
 - `will_not_change`
 - `acceptance_criteria`
 
-所有字段都必须存在，且顺序固定，因为完整性验证以第一个和最后一个字段界定 payload 边界。确实没有内容时可以使用空数组。批准后，规范区块成为不可变数据。执行和任务编译都不得改写、重排、扩大、弱化、格式归一化、重新缩进或静默增加范围。
+所有字段都必须存在，且顺序固定，因为完整性验证以第一个和最后一个字段界定 payload 边界。批准前，`in_scope` 和 `acceptance_criteria` 必须各有至少一个非空条目；其它数组确实没有内容时可以为空。部分或条件批准若没有任何获批 `in_scope` 条目，必须返回 `BLOCKED`。批准后，规范区块成为不可变数据。执行和任务编译都不得改写、重排、扩大、弱化、格式归一化、重新缩进或静默增加范围。
 
 唯一的 `cdf-scope/v1` 区块是范围的唯一规范授权源，其中的 `acceptance_criteria` 字段是验收标准的唯一规范源。Development Plan 的 `Acceptance Criteria` 只是可读投影：必须逐项、同序、逐字重复全部规范标准，不得增加、删除、弱化、扩大、重新解释、合并或拆分。Task-level 标准只能逐字引用适用的规范条目。任何新增或改变的标准都是范围变更，必须重新规划并审批。
 
@@ -181,7 +180,7 @@ Approval-State: approved
 - 保留部分批准的审计投影，但不复制 Scope Lock；
 - 执行 Scope Guard；
 - 默认保存到 `<Workspace>/_cdtask/YYYY-MM-DD-<short-slug>.md`；
-- 回读验证时逐行比对两个规范 payload，返回绝对路径并停止。
+- 回读验证时逐行比对两个规范 payload，并重新计算必需摘要，随后返回绝对路径并停止。
 
 如果任务编译需要新范围、接口、依赖、架构决策、改变验收标准、不充分的 Scope Lock，或无法安全分离部分批准的剩余内容，它必须 `BLOCKED` 并返回 CDF 规划，重新获得批准。
 
@@ -195,9 +194,11 @@ Approval-State: approved
 
 payload 边界是固定的：Scope Lock 从 `Scope-Lock-Version: cdf-scope/v1` 开始，到最后一个 `acceptance_criteria` 条目结束；Approval Record 从 `## Approval Record` 开始，到最后一个字段结束；两者都排除 Markdown 围栏分隔符。八个 Scope Lock 字段必须保持规范顺序，因为边界依赖该顺序。
 
+Payload 字节统一使用 UTF-8、LF 换行，排除 Markdown 围栏分隔符，payload 行不得有尾随空白，并且最后一行后恰好保留一个尾随 LF。
+
 比对是逐行进行的：行数相同、顺序相同、字符（含缩进）相同。任何差异都是不匹配，CDF 会报告它，而不是改写已批准内容来强行通过。边界有歧义、规范区块重复，或 payload 行存在尾随空白，同样直接拒绝。
 
-SHA-256 摘要只是可选的便利项，绝不等于验证本身。只有在确实对精确 payload 运行过 `shasum -a 256` 这类哈希命令后，CDF 才记录摘要；否则记录 `Unavailable`。CDF 绝不写入未经计算的摘要。
+对于持久化任务，CDF 在权威的逐行比对通过后，必须为两个精确规范 payload 分别计算并保存 SHA-256 摘要。摘要是跨会话恢复使用的持久基线，恢复时必须重新计算并匹配。任一摘要无法计算时，不得把任务报告为可恢复。旧任务若记录 `Unavailable`，执行前必须重新审批并完成可验证的重新保存。
 
 ## 恢复已保存任务
 
@@ -208,7 +209,7 @@ $cdf continue task <path>
 实施前，CDF 会：
 
 1. 验证 `task_contract: cdf-cdtask/v1` 和全部必需区块；
-2. 逐行比对持久化的规范 Scope Lock 和 Approval Record 与其保存时的 payload；
+2. 按固定边界提取规范 Scope Lock 和 Approval Record，并要求重新计算的摘要与持久化基线一致；
 3. 比较 workspace、branch、commit、`Source-Worktree-State`、相关 `Source-Worktree-Changes`、当前代码和依赖；
 4. 重新检查假设、停止条件、阶段边界、部分批准排除项、验收标准和验证义务；
 5. 判断已批准的实现含义是否仍然有效。
@@ -227,7 +228,7 @@ $cdf continue task <path>
 - Code Changes Authorized In This Turn: Yes
 ```
 
-只有此后，CDF 才能按依赖顺序执行已保存的批准范围。该记录不修改已保存任务或其 Approval Record。仅检查、审阅、总结或验证任务既不创建 Resume Authorization Record，也不授权实施。
+只有此后，CDF 才能按依赖顺序执行已保存的批准范围。首次修改代码前，CDF 会按 `cdf-execution-progress/v1` 创建或验证 `<saved-task-path>.progress.yaml`。Sidecar 只记录 `pending`、`in_progress`、`verified` 或 `blocked`；恢复时只跳过证据仍适用的 `verified` 任务，并在继续前检查中断任务。该记录和 sidecar 都不修改已保存任务或其 Approval Record。仅检查、审阅、总结或验证任务既不创建 Resume Authorization Record，也不授权实施或修改进度。
 
 ## 边界
 
@@ -238,7 +239,7 @@ CDF 不会：
 - 扩大批准范围或顺手清理相邻代码；
 - 把保存时的持久化批准当成未来执行授权；
 - 把计划中的验证描述为已经完成；
-- 充当 runtime、scheduler、worker 分配系统或自动实现 Review 系统。
+- 充当后台 runtime、scheduler、worker 分配系统或自动实现 Review 系统；进度 sidecar 只是执行日志。
 
 完整规则以 [SKILL.md](SKILL.md) 为准。
 
@@ -276,6 +277,7 @@ $cdf validate task <path> without executing it
 - [Coding Discipline](references/karpathy-guidelines.md)
 - [Boundary Cases](references/boundary-cases.md)
 - [Internal Task Handoff](references/task-handoff.md)
+- [Saved-Task Execution Progress](references/execution-progress.md)
 - [Internal Task Compiler](components/cdtask/COMPONENT.md)
 
 ## 安装
@@ -301,7 +303,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 ## 版本语义
 
 - **CDF Suite maturity：** v0.1
-- **Skill package version：** 1.1.0
+- **Skill package version：** 1.2.0
 
 两者是不同的版本体系。Suite maturity 表示 CDF 架构，package version 表示可分发版本。
 

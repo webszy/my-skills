@@ -1,6 +1,6 @@
 # CDF Risk Classification
 
-Read this file before finalizing a CDF risk level. The signal checklist identifies affected surfaces; the six dimensions determine the final level.
+Read this file when the compact Level S Reverse Check in [SKILL.md](../SKILL.md#4-risk-gate) does not definitively pass. A confirmed Level S fast path does not load this reference. The signal checklist identifies affected surfaces; the six dimensions determine the final level.
 
 ## Classification Rule
 
@@ -14,6 +14,27 @@ Assess:
 6. **Coordination** — one local change, shared-owner coordination, rollout/operations, or multi-system phases.
 
 Use the highest level justified by the combined dimensions and applicable risk floors. A `HIT` is evidence, not a universal Level L rule.
+
+## Mandatory Signal Record
+
+Record `CLEAR`, `HIT`, or `UNKNOWN` with evidence for every row:
+
+| ID | Signal |
+|---|---|
+| ESC-01 | Shared components, primitives, tokens, styles, or global state |
+| ESC-02 | Conditional rendering, feature gates, entitlements, permissions, or user-specific behavior |
+| ESC-03 | Persistent data writes/deletes, schema, migration, backfill, or user data |
+| ESC-04 | Billing, payments, subscriptions, pricing, authentication, or authorization |
+| ESC-05 | Reports, analytics, telemetry, revenue/cost/ROI, or business metrics |
+| ESC-06 | Cache, jobs, sync, queues, retries, idempotency, events, webhooks, or consumers |
+| ESC-07 | Internationalization, accessibility, compliance, security, privacy, or observability |
+| ESC-08 | Application, deployment, environment, or production configuration |
+| ESC-09 | Third-party APIs, external contracts, static delivery, or release packaging |
+| ESC-10 | Architecture, new module/service, major redesign, migration coordination, or phased rollout |
+| ESC-11 | Evidence is insufficient to bound a higher plausible risk |
+| ESC-12 | Evidence materially conflicts about scope, behavior, ownership, risk, or impact |
+
+Signals are evidence and may impose a floor; use the highest level supported by the combined record and dimensions.
 
 ## Signal Floors and Escalation
 
@@ -34,22 +55,9 @@ Use the highest level justified by the combined dimensions and applicable risk f
 
 Several bounded signals together may produce Level L even when none would do so alone. Consider their interaction, not just each row in isolation.
 
-## Level S Reverse Check
+## Level S Boundary
 
-Level S is valid only when every row passes:
-
-| ID | Required condition |
-|---|---|
-| S-01 | Exactly one identified, non-shared target |
-| S-02 | Copy, spacing, color, icon size, or other static presentation only |
-| S-03 | No behavior, state, API, data, contract, configuration, or generated-artifact change |
-| S-04 | Acceptance and verification are local to the target |
-| S-05 | The change is explicit, trivially reversible, and requires no adjacent cleanup |
-| S-06 | Evidence is sufficient and consistent; every relevant signal is `CLEAR` |
-
-Record `PASS`, `FAIL`, or `UNKNOWN` with evidence. A `FAIL` requires Level M or higher. An `UNKNOWN` follows the Evidence Gap path.
-
-All six rows must be `PASS` to use the Level S Fast Path. Assess them as reasoning; report only the aggregate result on the fast path's `Reverse Check` line.
+The compact S Reverse Check in [SKILL.md](../SKILL.md#4-risk-gate) is the sole Level S authority. If this file was loaded because any S row failed, was unknown, or exposed a plausible non-S category, do not return to the fast path by silently clearing that evidence. Resolve the evidence and re-run the authoritative S check, or classify at Level M or above.
 
 ## Level M Reverse Check
 
@@ -91,7 +99,7 @@ A separable non-conflicting subset may proceed only through a new plan, its own 
 
 ## Final Record
 
-For Level S the classification is internal reasoning, surfaced only as `Reverse Check: PASS` on the Fast Path Plan. For Level M and above, the Risk Gate Result must contain:
+For a Level S fast path, classification is internal reasoning surfaced only as `Reverse Check: PASS`. When Level S is promoted to a full plan for `Save as Task`, its Risk Gate Result records `Final Level: S`, the six dimensions, a compact all-clear signal summary, `Reverse Check: S`, and a concise rationale. For Level M and above, the Risk Gate Result must contain:
 
 - final level;
 - evidence for all six dimensions;

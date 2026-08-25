@@ -30,7 +30,7 @@ CDF 让小改动保持轻量，同时对高风险、敏感、跨域或架构级�
 ### 合同要点
 
 - Development Plan 按固定顺序使用这些规范标题：`Requirement Understanding`、`Evidence Summary`、`Risk Gate Result`、`Scope Lock`、`Technical Approach`、`Implementation Plan`、`Risks`、`Rollback Plan`、`Acceptance Criteria`、`Verification Strategy` 和 `Next Action`。
-- 唯一的 `cdf-scope/v1` 区块是范围的唯一规范授权源，其中的 `acceptance_criteria` 字段是验收标准的唯一规范源。Development Plan 的 `Acceptance Criteria` 只是逐项、同序、逐字投影。
+- 唯一的 `cdf-scope/v1` 区块是范围的唯一规范授权源，其中的 `acceptance_criteria` 字段是验收标准的唯一规范源。可审批的 `in_scope` 和 `acceptance_criteria` 数组都必须非空。Development Plan 的 `Acceptance Criteria` 只是逐项、同序、逐字投影。
 - 部分批准时，`Partial Approval Result` 只是已批准项与未批准项的审计投影；它不复制完整 Scope Lock，也不产生第二个授权源。
 - 保存前，CDF 会执行 drift preflight，并记录当前 `Workspace`、`Source-Branch`、`Source-Commit`、`Source-Worktree-State` 和相关的 `Source-Worktree-Changes`。Material drift 必须返回规划并重新审批。
 - Scope Lock 与 Approval Record 的 SHA-256 使用确定性序列化：UTF-8 编码、LF 换行、排除 Markdown 围栏分隔符、内容行不得有尾随空白，并且恰好包含一个尾随 LF。
@@ -41,7 +41,7 @@ CDF 让小改动保持轻量，同时对高风险、敏感、跨域或架构级�
 $cdf continue task <path>
 ```
 
-CDF 会验证 task contract 和必需区块、完整性摘要、当前仓库状态、假设、停止条件及 material drift。验证成功后，显式 continue 请求会创建本回合的 `Resume Authorization Record`；只有此后才能执行已保存工作。仅检查、审阅、总结或验证任务不授权执行。
+CDF 会验证 task contract 和必需区块、完整性摘要、当前仓库状态、假设、停止条件及 material drift。验证成功后，显式 continue 请求会创建本回合的 `Resume Authorization Record`；只有此后才能执行已保存工作。首次修改代码前，CDF 会创建或验证独立的 `cdf-execution-progress/v1` sidecar，只跳过证据仍适用的 `verified` 任务，并在继续前检查中断任务。仅检查、审阅、总结或验证任务既不授权执行，也不授权修改进度。
 
 CDF 配置为显式调用。常用形式包括 `$cdf`、`/cdf`、`cdf:` 和 `controlled-development-flow`。
 
@@ -74,7 +74,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 ### 版本语义
 
 - **CDF Suite maturity：** v0.1
-- **Skill package version：** 1.1.0
+- **Skill package version：** 1.2.0
 
 两者是不同的版本体系。Suite maturity 表示 CDF 架构成熟度，package version 表示可分发版本。
 

@@ -186,4 +186,4 @@ Do not blindly execute the task, but do not declare material drift from the comm
 
 The saved Approval Record still does not authorize execution. Only an explicit CDF continue request followed by successful contract, integrity, scope, assumption, and drift validation creates the current-turn Resume Authorization Record. Inspecting, reviewing, summarizing, or validating the task creates no such record and authorizes no code changes.
 
-See [Task Handoff](task-handoff.md) for the complete resume and drift rules.
+See [Resume a Saved Task](../SKILL.md#resume-a-saved-task) and [Repository Drift](../SKILL.md#repository-drift) for the authoritative resume and drift rules.

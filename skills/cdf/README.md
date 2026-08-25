@@ -48,11 +48,10 @@ Workspace: <absolute path>
 Source-Branch: <branch>
 Source-Commit: <commit>
 Source-Worktree-State: <clean | dirty | Unavailable>
-Source-Worktree-Changes:
-- <stable git status entry for a relevant path>
+Source-Worktree-Changes: <[] | [Unavailable] | [' M src/foo.ts', '?? src/new-file.ts']>
 ```
 
-`Source-Worktree-Changes` is limited to tracked or untracked paths relevant to approved, affected, or protected areas. A clean worktree uses an empty list; unavailable state records the reason. Dirty state is evidence and a drift signal, not automatic proof of material risk or drift.
+`Source-Worktree-Changes` is one flow-style YAML array limited to tracked or untracked paths relevant to approved, affected, or protected areas. Quote dirty entries so both Git `XY` characters, including a leading space, survive unchanged. No relevant changes uses `[]`; unavailable state uses `[Unavailable]` and records the reason. Dirty state is evidence and a drift signal, not automatic proof of material risk or drift.
 
 ### Risk Classification
 
@@ -65,7 +64,7 @@ The S/M/L/XL risk model is unchanged. Risk is determined from impact, blast radi
 | **L** | Cross-cutting behavior, persistent data, billing, auth, security, privacy, materially meaningful analytics, meaningful external contracts, or non-trivial rollback |
 | **XL** | Architecture, a new subsystem/service, migration, major data-flow redesign, phased rollout, or multi-system coordination |
 
-Risk signals provide evidence and may establish a floor; a signal is not automatically the final level. Level S and M require reverse checks. An unresolved `UNKNOWN` forbids a level below the lowest plausible risk. If CDF cannot produce a safely bounded plan, or if conflicting evidence changes meaning, scope, acceptance, or safety, it stops as `BLOCKED`.
+Risk signals provide evidence and may establish a floor; a signal is not automatically the final level. CDF first runs the compact S Reverse Check in `SKILL.md`. A definite Level S candidate does not load the full risk reference; any failed or unknown S row, or any plausible non-S category, loads `risk-classification.md` and its complete signal record. An unresolved `UNKNOWN` forbids a level below the lowest plausible risk. If CDF cannot produce a safely bounded plan, or if conflicting evidence changes meaning, scope, acceptance, or safety, it stops as `BLOCKED`.
 
 Planning depth follows the level. Level S uses the fast path below; Level M, L, and XL use the full Development Plan.
 
@@ -89,7 +88,7 @@ CDF leaves the fast path and produces a full Development Plan as soon as evidenc
 
 ### Development Plan Contract
 
-Every approval-ready Development Plan at Level M, L, or XL uses these canonical headings in this order:
+Every approval-ready full Development Plan at Level M, L, or XL, plus a Level S plan promoted for **Save as Task**, uses these canonical headings in this order:
 
 1. `Requirement Understanding`
 2. `Evidence Summary`
@@ -103,11 +102,11 @@ Every approval-ready Development Plan at Level M, L, or XL uses these canonical 
 10. `Verification Strategy`
 11. `Next Action`
 
-The headings are carried directly into a handoff or saved task; they are not renamed, combined, split, or regenerated. Level S uses the fast path instead, and adopts these headings only when promoted for **Save as Task**. `Rollback Plan` may be concise for Level M, while Level L and XL require the additional detail described in [SKILL.md](SKILL.md).
+The headings are carried directly into a handoff or saved task; they are not renamed, combined, split, or regenerated. Level S uses the fast path instead, and adopts these headings only when promoted for **Save as Task**. `Rollback Plan` may be concise or genuinely `None` for Level S or M, while Level L and XL require the additional detail described in [SKILL.md](SKILL.md).
 
 ### Scope Lock and Acceptance Authority
 
-Every approval-ready plan at Level M or above contains exactly one canonical `cdf-scope/v1` block with eight fields, in this order:
+Every approval-ready full plan contains exactly one canonical `cdf-scope/v1` block with eight fields, in this order, including a Level S plan promoted for **Save as Task**:
 
 - `in_scope`
 - `out_of_scope`
@@ -118,7 +117,7 @@ Every approval-ready plan at Level M or above contains exactly one canonical `cd
 - `will_not_change`
 - `acceptance_criteria`
 
-Every field must exist and the order is fixed, because integrity verification derives the payload boundary from the first and last field. Genuinely empty fields may use empty arrays. After approval, the canonical block is immutable. Execution and task compilation may not paraphrase, reorder, widen, weaken, normalize, re-indent, or silently add scope.
+Every field must exist and the order is fixed, because integrity verification derives the payload boundary from the first and last field. `in_scope` and `acceptance_criteria` must each contain at least one non-empty entry before approval; the other arrays may be empty. A partial or conditional result with no approved `in_scope` item is `BLOCKED`. After approval, the canonical block is immutable. Execution and task compilation may not paraphrase, reorder, widen, weaken, normalize, re-indent, or silently add scope.
 
 The single `cdf-scope/v1` block is the sole canonical scope authority, and its `acceptance_criteria` field is the sole canonical acceptance source. The Development Plan’s `Acceptance Criteria` section is only a readable projection: it repeats every canonical criterion item for item, in the same order and exact wording. It may not add, delete, weaken, broaden, reinterpret, merge, or split a criterion. Task-level criteria may reference only applicable canonical entries verbatim. A newly required or changed criterion is a scope change and requires renewed planning and approval.
 
@@ -181,7 +180,7 @@ The internal task compiler:
 - preserves a partial-approval audit projection without duplicating the Scope Lock;
 - runs a Scope Guard;
 - saves to `<Workspace>/_cdtask/YYYY-MM-DD-<short-slug>.md` by default;
-- performs read-back validation comparing both canonical payloads line for line, returns the absolute path, and stops.
+- performs read-back validation comparing both canonical payloads line for line, recomputes their required digests, returns the absolute path, and stops.
 
 If compilation needs new scope, an interface, dependency, architecture decision, changed acceptance criterion, insufficient Scope Lock, or an inseparable partial remainder, it returns `BLOCKED` to CDF planning for renewed approval.
 
@@ -195,9 +194,11 @@ The canonical Scope Lock and Approval Record must survive persistence and resume
 
 Payload boundaries are fixed: the Scope Lock runs from `Scope-Lock-Version: cdf-scope/v1` to the last `acceptance_criteria` entry, the Approval Record runs from `## Approval Record` to its last field, and code-fence delimiters are excluded from both. The eight Scope Lock fields must keep their canonical order, since the boundary depends on it.
 
+Payload bytes use UTF-8, LF line endings, no Markdown fence delimiters, no trailing whitespace on payload lines, and exactly one trailing LF.
+
 Comparison is line for line: same count, same order, same characters including indentation. Any difference is a mismatch, and CDF reports it rather than rewriting approved content to make it pass. Ambiguous boundaries, a duplicated canonical block, or trailing whitespace on a payload line are also rejections.
 
-A SHA-256 digest is an optional convenience, never the verification itself. CDF records one only after actually running a hashing command such as `shasum -a 256` over the exact payload, and records `Unavailable` otherwise. It never writes a digest it did not compute.
+For a persisted task, CDF computes and stores a SHA-256 digest for each exact canonical payload after the authoritative line-for-line comparison. Those digests are required as the durable resume baseline and are recomputed later. If either digest cannot be computed, the task is not reported as resumable. A legacy `Unavailable` digest requires renewed approval and a verified re-save before execution.
 
 ## Resume a Saved Task
 
@@ -208,7 +209,7 @@ $cdf continue task <path>
 Before implementation, CDF:
 
 1. validates `task_contract: cdf-cdtask/v1` and every required section;
-2. compares both canonical payloads with their persisted text line for line;
+2. extracts both canonical payloads under the fixed boundaries and requires their recomputed digests to match the persisted baselines;
 3. compares workspace, branch, commit, `Source-Worktree-State`, relevant `Source-Worktree-Changes`, current code, and dependencies;
 4. rechecks assumptions, stop conditions, phase boundaries, partial exclusions, acceptance criteria, and verification obligations;
 5. determines whether the approved implementation meaning is still valid.
@@ -227,7 +228,7 @@ After validation succeeds, the explicit `$cdf continue task <path>` request crea
 - Code Changes Authorized In This Turn: Yes
 ```
 
-Only then may CDF execute the saved approved scope in dependency order. The record does not modify the saved task or its Approval Record. A request only to inspect, review, summarize, or validate a task creates no Resume Authorization Record and does not authorize implementation.
+Only then may CDF execute the saved approved scope in dependency order. Before the first code change, CDF creates or validates `<saved-task-path>.progress.yaml` using `cdf-execution-progress/v1`. The sidecar records `pending`, `in_progress`, `verified`, or `blocked`; resume skips only still-applicable `verified` tasks and inspects interrupted work before continuing. The record and sidecar do not modify the saved task or its Approval Record. A request only to inspect, review, summarize, or validate a task creates no Resume Authorization Record and authorizes no implementation or progress mutation.
 
 ## Boundaries
 
@@ -238,7 +239,7 @@ CDF does not:
 - expand approved scope or perform adjacent cleanup;
 - treat a saved persistence approval as future execution authority;
 - report a planned verification as completed;
-- act as a runtime, scheduler, worker-assignment system, or automatic implementation reviewer.
+- act as a background runtime, scheduler, worker-assignment system, or automatic implementation reviewer; the progress sidecar is only an execution journal.
 
 The complete source of truth is [SKILL.md](SKILL.md).
 
@@ -277,6 +278,7 @@ $cdf validate task <path> without executing it
 - [Coding Discipline](references/karpathy-guidelines.md)
 - [Boundary Cases](references/boundary-cases.md)
 - [Internal Task Handoff](references/task-handoff.md)
+- [Saved-Task Execution Progress](references/execution-progress.md)
 - [Internal Task Compiler](components/cdtask/COMPONENT.md)
 
 ## Installation
@@ -302,7 +304,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 ## Version Semantics
 
 - **CDF Suite maturity:** v0.1
-- **Skill package version:** 1.1.0
+- **Skill package version:** 1.2.0
 
 These are separate version systems. Suite maturity describes the CDF architecture; package version describes the distributable release.
 

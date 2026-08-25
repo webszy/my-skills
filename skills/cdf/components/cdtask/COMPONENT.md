@@ -44,12 +44,12 @@ Workspace: <absolute path or Unavailable>
 Source-Branch: <branch or Unavailable>
 Source-Commit: <commit or Unavailable>
 Source-Worktree-State: <clean | dirty | Unavailable>
-Source-Worktree-Changes: <legal YAML array described below>
+Source-Worktree-Changes: <[] | [Unavailable] | [' M src/foo.ts', '?? src/new-file.ts']>
 Save-Drift-Preflight: <matched | non-material-drift>
 Save-Drift-Notes: <none | concise evidence-backed explanation>
 ```
 
-`Source-Worktree-Changes` is a stable, path-scoped projection of relevant `git status --short` entries. Use `[]` when there are no relevant changes, including a clean worktree. Use a YAML sequence such as `[' M src/foo.ts', '?? src/new-file.ts']` for changes related to approved work, affected areas, or protected areas. Quoting must preserve both `XY` status characters, including a leading space. Use `[Unavailable]` only when the status evidence cannot be obtained. Preserve repository-relative paths and sort entries deterministically by path, then status. Do not dump unrelated dirty paths from a large repository. A dirty worktree is a drift signal, not proof of material drift.
+`Source-Worktree-Changes` is one flow-style YAML array and a stable, path-scoped projection of relevant `git status --short` entries. Use `[]` when there are no relevant changes, including a clean worktree. Quote every dirty entry, preserving both `XY` status characters including a leading space. Use `[Unavailable]` only when the status evidence cannot be obtained. Preserve repository-relative paths and sort entries deterministically by path, then status. Do not dump unrelated dirty paths from a large repository. A dirty worktree is a drift signal, not proof of material drift.
 
 CDF may additionally provide persistence metadata:
 
@@ -101,7 +101,7 @@ Before decomposition, verify all of the following:
 2. Workspace, branch, commit, worktree state, a legal `Source-Worktree-Changes` array, `Save-Drift-Preflight`, and `Save-Drift-Notes` are present, using `Unavailable` only where the contract permits it. Require `matched` with `none`, or `non-material-drift` with concise supporting notes. Treat them as the latest metadata from CDF's pre-save drift preflight; do not perform a second repository-planning pass.
 3. The Approval Record unambiguously binds the approved Development Plan and canonical Scope Lock and records **Save as Task** as the approved next action.
 4. The Development Plan has the canonical headings in the required order and has not been split, renamed, or regenerated.
-5. The plan's `### Acceptance Criteria` is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`.
+5. Canonical `in_scope` and `acceptance_criteria` are both non-empty, and the plan's `### Acceptance Criteria` is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`.
 6. The package has no contradiction among the Development Plan, Scope Lock, phase boundary, Approval Record, and partial-approval material.
 7. The approved evidence is sufficient to define tasks and write scopes without inventing paths, interfaces, modules, dependencies, or behavior.
 
@@ -115,17 +115,19 @@ The approved Development Plan must contain exactly one canonical block, in `### 
 
 ```yaml
 Scope-Lock-Version: cdf-scope/v1
-in_scope: []
+in_scope:
+  - <approved outcome or impact>
 out_of_scope: []
 non_goals: []
 assumptions: []
 stop_conditions: []
 will_change: []
 will_not_change: []
-acceptance_criteria: []
+acceptance_criteria:
+  - <observable result>
 ```
 
-All eight fields must exist and must be arrays. Empty arrays are valid; do not invent filler prose. This is the only canonical scope block in the handoff and saved task; do not copy it into a second scope section.
+All eight fields must exist and must be arrays. `in_scope` and `acceptance_criteria` must each contain at least one non-empty entry; the other arrays may be empty. Do not invent filler prose. A partial or conditional result with no approved `in_scope` item is `BLOCKED`. This is the only canonical scope block in the handoff and saved task; do not copy it into a second scope section.
 
 Treat the complete canonical block as an immutable opaque payload. Copy it verbatim. Do not paraphrase, rewrite, expand, weaken, normalize, re-indent, reorder, re-wrap, merge, omit, or reserialize it. Readable mappings elsewhere in the task document are secondary and must not conflict with the canonical block.
 
@@ -137,7 +139,7 @@ Apply [Integrity Verification](../../SKILL.md#integrity-verification) at handoff
 
 Before persistence, capture the received canonical payloads. After persistence, extract the saved payloads under the same boundaries and compare them with the received ones line for line. Any difference invalidates the saved task. A non-LF line ending, trailing whitespace on a payload line, a missing or ambiguous boundary, a reordered Scope Lock, or a duplicate canonical block is `BLOCKED`; CDTask must not repair the payload.
 
-A SHA-256 digest is optional. Record one only when a hashing command was actually run over the exact payload; otherwise record `Unavailable`. Never write a digest that was not computed that way, and never treat a digest as a substitute for the text comparison.
+After the authoritative line-for-line comparison succeeds, compute a SHA-256 digest over each exact canonical payload and persist both as the durable resume baseline. Never write a digest that was not produced by an actual hashing command, and never treat a digest as a substitute for the pre-save text comparison. If either digest cannot be computed, return `BLOCKED` with `persistence-failure` rather than saving a document that cannot prove its later baseline.
 
 ## Approval and Partial Approval
 
@@ -242,11 +244,13 @@ Saved-Task-Path: <absolute path | Unavailable>
 Task-Count: <number | Unavailable>
 Scope-Lock-Read-Back: <verified | not-verified>
 Approval-Record-Read-Back: <verified | not-verified>
+Scope-Lock-Digest: <verified | not-verified>
+Approval-Record-Digest: <verified | not-verified>
 Document-Read-Back: <verified | not-verified>
 Reason: <concise explanation | Not applicable>
 ```
 
-`READY` requires an absolute saved path and all three read-back fields set to `verified`. A result that has not been successfully persisted is not `READY`.
+`READY` requires an absolute saved path and all five read-back and digest fields set to `verified`. A result that has not been successfully persisted is not `READY`.
 
 ## Persistence
 
@@ -260,33 +264,19 @@ The default destination remains:
 
 Write only the task document and its required parent directory. Do not modify implementation files. Never silently overwrite an existing task document.
 
-After saving, reopen the exact destination and verify the frontmatter, required sections, stable task IDs, dependency graph, Scope Guard, Compilation Gate, immutable Approval Record, sole canonical Scope Lock, acceptance projections, and traceability arrays. Compare both canonical payloads line for line. Do not report success when read-back verification fails.
+After saving, reopen the exact destination and verify the frontmatter, required sections, stable task IDs, dependency graph, Scope Guard, Compilation Gate, immutable Approval Record, sole canonical Scope Lock, acceptance projections, required payload digests, and traceability arrays. Compare both canonical payloads line for line and recompute both digests. Do not report success when read-back verification fails.
 
 ## Resume Semantics
 
-Every saved task resumes through CDF; CDTask has no resume entry point and the document alone grants no execution authority.
+Every saved task resumes through CDF; CDTask has no resume entry point and the document alone grants no execution authority. [Resume a Saved Task](../../SKILL.md#resume-a-saved-task), [Integrity Verification](../../SKILL.md#integrity-verification), and [Repository Drift](../../SKILL.md#repository-drift) are the sole authorities for later validation and authorization.
 
-Before CDF continues a saved task, CDF must:
-
-1. read the task document;
-2. validate `cdf-cdtask/v1` and the required saved-document structure;
-3. extract the canonical `cdf-scope/v1` block and immutable Approval Record under the defined boundaries and compare them line for line with the persisted payloads, without modifying either;
-4. compare the recorded workspace, branch, commit, relevant worktree state, path-scoped `Source-Worktree-Changes`, and repository evidence with the current repository;
-5. re-check assumptions and stop conditions;
-6. confirm the tasks still match the current code, verbatim approved Development Plan, canonical acceptance criteria, Partial Approval Result, and approved phase boundary;
-7. determine whether material drift has invalidated the applicability of the risk classification, Scope Lock, acceptance criteria, phase boundary, or saved approval;
-8. require an explicit current request to continue this saved task before any implementation.
-
-Dirty state or a status-list difference is a drift signal, not automatically material. Material drift, a failed assumption, an active stop condition, changed task meaning, or inapplicable approval returns to CDF planning and renewed approval. Never execute an old task blindly.
-
-Only after every resume check passes and the user explicitly requests continuation, CDF creates the runtime-only record defined in [Resume a Saved Task](../../SKILL.md#resume-a-saved-task).
-
-The Resume Authorization Record is current-turn execution evidence. Do not append it to or otherwise modify the saved task or the immutable Approval Record. A request only to inspect, review, summarize, or validate a task creates no Resume Authorization Record and authorizes no code changes.
+Only after those checks pass and the user explicitly requests continuation may CDF create the runtime-only Resume Authorization Record and enter [Execution Progress](../../references/execution-progress.md). Runtime status belongs only in the separate sidecar. Never append it to the saved task or modify the canonical Scope Lock or Approval Record. An inspect, review, summarize, or validate request authorizes no implementation or progress mutation.
 
 ## References
 
 - [Task Templates](references/task-templates.md) — read before dependency analysis and task compilation.
 - [Persistence](references/persistence.md) — read before choosing a destination or writing a task document.
+- [Execution Progress](../../references/execution-progress.md) — owned by CDF after a later authorized resume, never by this compiler.
 
 ## Non-Negotiable Rules
 

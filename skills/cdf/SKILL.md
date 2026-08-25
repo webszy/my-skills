@@ -1,6 +1,6 @@
 ---
 name: cdf
-description: Run a controlled development workflow that understands a development request or PRD, inspects repository evidence, classifies risk, locks scope, obtains explicit human approval, then executes the approved work or saves it as a resumable task. Use when the user explicitly invokes cdf, /cdf, $cdf, cdf:, or controlled-development-flow, or explicitly asks for a controlled development flow.
+description: Run a controlled development workflow that understands a development request or PRD, inspects repository evidence, classifies risk, locks scope, obtains explicit human approval, then executes the approved work or saves it as a resumable task. Use when the user explicitly invokes /cdf, $cdf, cdf:, or controlled-development-flow, or explicitly asks for a controlled development flow.
 ---
 
 # CDF: Controlled Development Flow
@@ -46,9 +46,9 @@ CDF does not:
 - infer approval from acknowledgement or silence;
 - expand approved scope, perform adjacent cleanup, or add speculative flexibility;
 - treat a planned verification as completed verification;
-- invent a runtime, scheduler, worker assignment system, or automatic review system.
+- invent a background runtime, scheduler, worker assignment system, or automatic review system; the saved-task progress sidecar is only an execution journal.
 
-If an explicitly invoked request is purely informational and asks for no development change, answer it normally and state that the controlled development path was not entered.
+If an explicitly invoked request is purely informational and asks for no development change, answer it normally and state that the controlled development path was not entered. Mentioning the name `cdf`, discussing its files, or explicitly declining CDF is not an invocation.
 
 ## Entry Routes
 
@@ -94,15 +94,25 @@ Prefer repository evidence over intuition. Keep inspection proportional to the p
 
 ```text
 Source-Worktree-State: <clean | dirty | Unavailable>
-Source-Worktree-Changes:
-- <stable git status entry for a relevant path>
+Source-Worktree-Changes: <[] | [Unavailable] | [' M src/foo.ts', '?? src/new-file.ts']>
 ```
 
-Limit `Source-Worktree-Changes` to paths relevant to the candidate approved, affected, or protected areas; do not dump an unrelated large-repository status list. Preserve repository-relative paths and both characters of Git's stable `XY` status notation, including a leading space, and sort entries by path and then status. Quote entries when needed so YAML retains those bytes. Use an empty list when clean and a single `Unavailable` list entry plus the reason when the state cannot be read. Dirty state is an evidence and drift signal, not automatic proof of material risk or drift. Never overwrite or discard a user's uncommitted changes.
+Represent `Source-Worktree-Changes` as one flow-style YAML array. Limit it to paths relevant to the candidate approved, affected, or protected areas; do not dump an unrelated large-repository status list. Preserve repository-relative paths and both characters of Git's stable `XY` status notation, including a leading space, quote every dirty entry, and sort entries by path and then status. Use `[]` when no relevant changes exist and `[Unavailable]` plus the reason when the state cannot be read. Dirty state is an evidence and drift signal, not automatic proof of material risk or drift. Never overwrite or discard a user's uncommitted changes.
 
 ### 4. Risk Gate
 
-Read [references/risk-classification.md](references/risk-classification.md) before final classification. Assess all six dimensions:
+First test a Level S candidate against every row below:
+
+| ID | Required condition |
+|---|---|
+| S-01 | Exactly one identified, non-shared target |
+| S-02 | Copy, spacing, color, icon size, or other static presentation only |
+| S-03 | No behavior, state, API, data, contract, configuration, or generated-artifact change |
+| S-04 | Acceptance and verification are local to the target |
+| S-05 | The change is explicit, trivially reversible, and requires no adjacent cleanup |
+| S-06 | Evidence is sufficient and consistent, with no shared or conditional behavior, persistence, money or access, analytics, background work, sensitive concern, configuration, external contract, architecture, evidence gap, or evidence conflict |
+
+Record `PASS`, `FAIL`, or `UNKNOWN` with evidence for every row. All six rows must be `PASS` to use the Level S Fast Path. A definite Level S candidate does not load the full risk reference. Any `FAIL`, `UNKNOWN`, or plausible non-S category requires reading [references/risk-classification.md](references/risk-classification.md), completing its Mandatory Signal Record and applicable M Reverse Check, and then assessing all six dimensions:
 
 - impact;
 - blast radius;
@@ -111,24 +121,7 @@ Read [references/risk-classification.md](references/risk-classification.md) befo
 - sensitivity;
 - coordination requirements.
 
-Complete the Mandatory Signal Record with `CLEAR`, `HIT`, or `UNKNOWN` and evidence for every row:
-
-| ID | Signal |
-|---|---|
-| ESC-01 | Shared components, primitives, tokens, styles, or global state |
-| ESC-02 | Conditional rendering, feature gates, entitlements, permissions, or user-specific behavior |
-| ESC-03 | Persistent data writes/deletes, schema, migration, backfill, or user data |
-| ESC-04 | Billing, payments, subscriptions, pricing, authentication, or authorization |
-| ESC-05 | Reports, analytics, telemetry, revenue/cost/ROI, or business metrics |
-| ESC-06 | Cache, jobs, sync, queues, retries, idempotency, events, webhooks, or consumers |
-| ESC-07 | Internationalization, accessibility, compliance, security, privacy, or observability |
-| ESC-08 | Application, deployment, environment, or production configuration |
-| ESC-09 | Third-party APIs, external contracts, static delivery, or release packaging |
-| ESC-10 | Architecture, new module/service, major redesign, migration coordination, or phased rollout |
-| ESC-11 | Evidence is insufficient to bound a higher plausible risk |
-| ESC-12 | Evidence materially conflicts about scope, behavior, ownership, risk, or impact |
-
-Signals are evidence and may impose a risk floor; a signal is not the final risk by itself. In particular, a bounded shared component change, a small analytics event, bounded configuration, or bounded external-integration usage does not automatically require Level L. Use the impact-specific floors in the reference and the highest level supported by the combined evidence.
+Signals are evidence and may impose a risk floor; a signal is not the final risk by itself. Use the impact-specific floors in the risk reference and the highest level supported by the combined evidence.
 
 | Level | Typical boundary | Planning depth |
 |---|---|---|
@@ -137,9 +130,9 @@ Signals are evidence and may impose a risk floor; a signal is not the final risk
 | **L** | Cross-cutting behavior, persistent data, billing, auth, security, privacy, materially meaningful analytics, meaningful external contracts, or non-trivial rollback | Detailed with rollback |
 | **XL** | Architecture, new subsystem/service, migration, major data-flow redesign, phased rollout, or multi-system coordination | Design and approved phases |
 
-Before Level S, complete the S Reverse Check. Before Level M, complete the M Reverse Check. An unresolved `UNKNOWN` forbids a level below the lowest plausible risk; if a safe bounded plan cannot be produced, stop as `BLOCKED`. An unresolved conflict that changes implementation meaning, scope, acceptance, or safety is also `BLOCKED`.
+Before Level S, complete the local S Reverse Check above. Before Level M, complete the M Reverse Check in the risk reference. An unresolved `UNKNOWN` forbids a level below the lowest plausible risk; if a safe bounded plan cannot be produced, stop as `BLOCKED`. An unresolved conflict that changes implementation meaning, scope, acceptance, or safety is also `BLOCKED`.
 
-At Level S the signal record and Reverse Check are reasoning steps, not deliverables: assess every row, then report only the `PASS` result on the fast path's `Reverse Check` line. Show a signal row explicitly only when it is `HIT` or `UNKNOWN` — which also means the change is not Level S.
+At Level S the S Reverse Check is a reasoning step, not a full deliverable: assess every row, then report only the aggregate `PASS` result on the fast path's `Reverse Check` line. Show a row explicitly only when it is `FAIL` or `UNKNOWN` — which also means the change is not yet eligible for the fast path.
 
 ### 5. Development Plan and Scope Lock
 
@@ -167,7 +160,7 @@ Leave the fast path and produce a full Development Plan whenever evidence during
 
 #### Full Development Plan
 
-Every approval-ready plan at Level M, L, or XL contains:
+Every approval-ready full Development Plan at Level M, L, or XL, plus a Level S plan promoted for `Save as Task`, contains:
 
 ```markdown
 ## Development Plan
@@ -179,10 +172,10 @@ Every approval-ready plan at Level M, L, or XL contains:
 <facts, sources, inferences, assumptions, gaps, and conflicts>
 
 ### Risk Gate Result
-- Final Level: <M | L | XL>
+- Final Level: <S | M | L | XL>
 - Dimensions: <impact, blast radius, reversibility, uncertainty, sensitivity, coordination>
 - Mandatory Signals: <record or compact all-clear summary with evidence>
-- Reverse Check: <M | Not Applicable>
+- Reverse Check: <S | M | Not Applicable>
 - Rationale: <evidence-backed reason>
 
 ### Scope Lock
@@ -211,7 +204,7 @@ Every approval-ready plan at Level M, L, or XL contains:
 2. Save as Task
 ```
 
-These headings and their order are canonical. A handoff or saved task carries the approved sections directly; it does not rename, combine, split, or regenerate them. A Level S change promoted to a full plan for `Save as Task` uses these same headings. For Level M, `Rollback Plan` may be one concise reversible action or `None` only when rollback is genuinely not applicable. For Level L, name affected modules, ordered changes, regression risk, and rollback. For Level XL, also include the current architecture, proposed design, data/API/state flow, delivery phases, and the exact phase boundary awaiting approval.
+These headings and their order are canonical. A handoff or saved task carries the approved sections directly; it does not rename, combine, split, or regenerate them. A Level S change promoted to a full plan for `Save as Task` uses these same headings. For Level S or M, `Rollback Plan` may be one concise reversible action or `None` only when rollback is genuinely not applicable. For Level L, name affected modules, ordered changes, regression risk, and rollback. For Level XL, also include the current architecture, proposed design, data/API/state flow, delivery phases, and the exact phase boundary awaiting approval.
 
 For Level M, L, and XL, read [references/karpathy-guidelines.md](references/karpathy-guidelines.md) before finalizing the plan or implementing. For Level S, read it only when a prior attempt failed or extra minimal-change guidance is objectively useful.
 
@@ -233,7 +226,7 @@ Every phase-scoped handoff and saved task carries this block verbatim.
 
 ### Canonical Scope Lock
 
-Every plan must contain exactly one canonical block:
+Every full Development Plan must contain exactly one canonical block:
 
 ```yaml
 Scope-Lock-Version: cdf-scope/v1
@@ -252,7 +245,7 @@ acceptance_criteria:
   - <observable result>
 ```
 
-All eight fields must exist, in exactly this order, because [Integrity Verification](#integrity-verification) defines the payload boundary by the first and last field. Empty arrays are valid when there is no meaningful content; never invent filler merely to populate them. Before approval the block may be revised visibly. After approval it is canonical immutable data:
+All eight fields must exist, in exactly this order, because [Integrity Verification](#integrity-verification) defines the payload boundary by the first and last field. An approval-ready block requires at least one non-empty `in_scope` entry and at least one non-empty `acceptance_criteria` entry. The other arrays may be empty when there is no meaningful content; never invent filler merely to populate them. A partial or conditional result with no approved `in_scope` item is `BLOCKED`, not an empty approved plan. Before approval the block may be revised visibly. After approval it is canonical immutable data:
 
 - copy it verbatim to an internal task handoff or saved task;
 - do not paraphrase, reorder, merge, omit, weaken, expand, re-indent, normalize, or silently add scope;
@@ -352,8 +345,8 @@ After valid approval explicitly authorizes `Save as Task`:
 6. read and enter [components/cdtask/COMPONENT.md](components/cdtask/COMPONENT.md);
 7. validate approval, the canonical Scope Lock, and its acceptance projection;
 8. compile dependency-aware tasks and run the Scope Guard;
-9. persist the resumable document;
-10. read it back and validate its contract, canonical payloads, and traceability;
+9. compute both required canonical payload digests and persist the resumable document;
+10. read it back and validate its contract, canonical payloads, digests, and traceability;
 11. return the saved path and stop.
 
 The default destination is:
@@ -362,7 +355,7 @@ The default destination is:
 <Workspace>/_cdtask/YYYY-MM-DD-<short-slug>.md
 ```
 
-The internal component is already part of CDF. Do not request a separate installation and do not expose it as a Next Action. For a request whose desired deliverable is a task breakdown, `Save as Task` is the action that produces that durable definition; `Execute Now` means implementing the approved underlying development work, not returning an unsaved task list. The save preflight belongs to CDF; the internal compiler receives the latest metadata but does not assess requirements or regain planning authority. If task compilation discovers ambiguity, new scope, a changed acceptance criterion, an insufficient Scope Lock, or an inseparable partial remainder, it returns `BLOCKED`; CDF must re-enter planning, refresh the plan and Scope Lock package, and obtain renewed approval even when re-analysis leaves the Scope Lock text unchanged.
+The internal component is already part of CDF. Do not request a separate installation and do not expose it as a Next Action. For a request whose desired deliverable is a task breakdown, `Save as Task` is the action that produces that durable definition; `Execute Now` means implementing the approved underlying development work, not returning an unsaved task list. The save path creates no execution-progress sidecar because persistence approval is not execution authorization. The save preflight belongs to CDF; the internal compiler receives the latest metadata but does not assess requirements or regain planning authority. If task compilation discovers ambiguity, new scope, a changed acceptance criterion, an insufficient Scope Lock, or an inseparable partial remainder, it returns `BLOCKED`; CDF must re-enter planning, refresh the plan and Scope Lock package, and obtain renewed approval even when re-analysis leaves the Scope Lock text unchanged.
 
 ### Integrity Verification
 
@@ -370,7 +363,7 @@ The canonical Scope Lock and the Approval Record must survive persistence and re
 
 Each payload has these boundaries:
 
-- the Scope Lock payload starts at `Scope-Lock-Version: cdf-scope/v1` and ends at the last `acceptance_criteria` entry, or at the `acceptance_criteria: []` line when that array is empty;
+- the Scope Lock payload starts at `Scope-Lock-Version: cdf-scope/v1` and ends at the last non-empty `acceptance_criteria` entry;
 - the Approval Record payload starts at `## Approval Record` and ends at its last field;
 - Markdown code-fence delimiters are excluded from both.
 
@@ -378,7 +371,9 @@ The eight Scope Lock fields must appear in the order shown in [Canonical Scope L
 
 Compare payloads line by line: same line count, same order, same characters including indentation. Any difference in wording, indentation, ordering, or line breaks is a mismatch. Reject a mismatch and report it; never rewrite approved content to make a comparison succeed. Ambiguous boundaries, a duplicated canonical block, or trailing whitespace on a payload line are also rejections.
 
-A SHA-256 digest is an optional convenience, never the verification itself. Record one only after actually running a hashing command over the exact payload bytes, for example by writing the payload to a temporary file and running `shasum -a 256`. Never write a digest that was not computed that way. When no digest was computed, record `Unavailable` and rely on text comparison, which is the authoritative check in either case.
+The bytes used for comparison and hashing are deterministic: UTF-8 encoding, LF line endings, no Markdown code-fence delimiters, no trailing whitespace on payload lines, and exactly one trailing LF after the final payload line. Approved payloads must already satisfy this representation; never normalize or rewrite approved content merely to make a digest match.
+
+For a persisted task, compute and store a SHA-256 digest for each exact payload after the line-for-line pre-save comparison. Text comparison remains authoritative while the approved handoff is available; the stored digests are the durable baseline used by a later resume. Record a digest only after actually running a hashing command over the exact payload bytes, for example by writing the payload to a temporary file and running `shasum -a 256`. If either digest cannot be computed, do not report the task as resumable. A legacy document whose digest is `Unavailable` cannot prove its cross-session baseline and must return to planning for renewed approval and a verified re-save before execution.
 
 ## Resume a Saved Task
 
@@ -386,7 +381,7 @@ For an explicit continue request:
 
 1. read the task document from the supplied path;
 2. require `task_contract: cdf-cdtask/v1` and validate every required section;
-3. apply [Integrity Verification](#integrity-verification) and require the persisted canonical Scope Lock and Approval Record to match their saved payloads line for line;
+3. apply [Integrity Verification](#integrity-verification), recompute both required payload digests, and require the persisted canonical Scope Lock and Approval Record to match their saved payloads;
 4. compare the current workspace, branch, commit, `Source-Worktree-State`, relevant `Source-Worktree-Changes`, code, and dependencies with the saved traceability for material drift;
 5. re-check assumptions, stop conditions, phase boundaries, partial-approval exclusions, acceptance criteria, and verification obligations;
 6. decide whether the approved implementation meaning is still valid.
@@ -407,19 +402,20 @@ When validation succeeds, the user's explicit `continue task <path>` request is 
 - Code Changes Authorized In This Turn: Yes
 ```
 
-Only after this record exists may CDF execute tasks in dependency order under the same guardrails as `Execute Now`. A request merely to inspect, review, summarize, or validate a task neither creates a Resume Authorization Record nor authorizes implementation.
+Only after this record exists may CDF execute tasks in dependency order under the same guardrails as `Execute Now`. Before the first code change, read [references/execution-progress.md](references/execution-progress.md), then create or validate the task's `cdf-execution-progress/v1` sidecar. Mark a task `in_progress` before modifying its Write Scope and `verified` only after its canonical acceptance mappings and actually performed checks pass. On a later resume, skip only `verified` tasks; inspect repository evidence before continuing an `in_progress` or `blocked` task. The sidecar is mutable execution metadata, but the saved task, canonical Scope Lock, and Approval Record remain immutable. A request merely to inspect, review, summarize, or validate a task neither creates a Resume Authorization Record nor authorizes implementation or progress mutation.
 
 ## Repository Drift
 
-Capture `Workspace`, `Source-Branch`, `Source-Commit`, `Source-Worktree-State`, and `Source-Worktree-Changes` in approved task handoffs when available. The changes list must preserve both Git `XY` status characters for repository-relative paths, including leading spaces, sort by path and then status, and stay limited to approved, affected, or protected paths. Re-check committed and uncommitted state immediately before execution, before persistence, and on resume. A branch, commit, dirty-state, or listed-path difference is a drift signal, not automatically material; inspect whether it changes approved implementation meaning, affected files, assumptions, risk, acceptance, verification, or rollback. Material drift requires refreshed planning and renewed approval. Record demonstrably non-material drift and proceed with current metadata. If traceability is unavailable, disclose the gap and apply the uncertainty rules from the Risk Gate.
+Capture `Workspace`, `Source-Branch`, `Source-Commit`, `Source-Worktree-State`, and flow-style `Source-Worktree-Changes` in approved task handoffs when available. The changes array must preserve both Git `XY` status characters for repository-relative paths, including leading spaces, sort by path and then status, and stay limited to approved, affected, or protected paths. Re-check committed and uncommitted state immediately before execution, before persistence, and on resume. A branch, commit, dirty-state, or listed-path difference is a drift signal, not automatically material; inspect whether it changes approved implementation meaning, affected files, assumptions, risk, acceptance, verification, or rollback. The expected progress sidecar is execution metadata, not implementation drift, but its binding and contents must validate. Material drift requires refreshed planning and renewed approval. Record demonstrably non-material drift and proceed with current metadata. If traceability is unavailable, disclose the gap and apply the uncertainty rules from the Risk Gate.
 
 ## References
 
 - [Requirement Gate](references/requirement-gate.md) — read for ambiguous, risky, PRD-like, or specification-like requests.
-- [Risk Classification](references/risk-classification.md) — read before final risk classification.
+- [Risk Classification](references/risk-classification.md) — read when the compact S Reverse Check does not definitively pass.
 - [Karpathy Guidelines](references/karpathy-guidelines.md) — read for Level M/L/XL planning and implementation.
 - [Boundary Cases](references/boundary-cases.md) — read when a request, approval, evidence conflict, or partial scope is near a control boundary.
 - [Task Handoff](references/task-handoff.md) — read only for `Save as Task` or saved-task resume.
+- [Execution Progress](references/execution-progress.md) — read only before executing or resuming a saved task.
 - [Internal Task Compiler](components/cdtask/COMPONENT.md) — enter only after approved `Save as Task`.
 
 ## Non-Negotiable Rules
@@ -430,6 +426,7 @@ Capture `Workspace`, `Source-Branch`, `Source-Commit`, `Source-Worktree-State`, 
 - Never expand or rewrite approved scope.
 - Treat `cdf-scope/v1.acceptance_criteria` as the sole canonical acceptance authority.
 - Treat saved approval as persistence authority, not future execution authority.
+- Keep saved-task runtime state only in a validated `cdf-execution-progress/v1` sidecar.
 - Never let the internal task compiler make product, architecture, risk, scope, or approval decisions.
 - Never continue after material drift or new evidence invalidates the approved plan.
 - Never claim verification that was not actually performed.

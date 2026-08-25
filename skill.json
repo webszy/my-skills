@@ -2,7 +2,7 @@
   "name": "my-skills",
   "displayName": "Webszy Skills",
   "description": "A collection of AI coding agent skills maintained by webszy, including CDF: a controlled AI development workflow for analysis, planning, approval, execution, and resumable tasking.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "webszy",
   "license": "MIT",
   "repository": "https://github.com/webszy/my-skills",
@@ -30,6 +30,17 @@
         "claude-code"
       ],
       "install": "npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claude-code -g -y"
+    },
+    {
+      "name": "app-analytics-audit-flow",
+      "displayName": "App Analytics Audit Flow",
+      "description": "A code-first app analytics audit workflow for mobile growth, advertising monetization, attribution, subscriptions, store analytics, stability data, funnels, retention, paywalls, ads, onboarding, and app optimization.",
+      "path": "skills/app-analytics-audit-flow",
+      "platforms": [
+        "codex",
+        "claude-code"
+      ],
+      "install": "npx skills add https://github.com/webszy/my-skills --skill app-analytics-audit-flow -a codex -a claude-code -g -y"
     }
   ]
 }

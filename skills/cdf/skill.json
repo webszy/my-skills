@@ -2,7 +2,7 @@
   "name": "cdf",
   "displayName": "Controlled Development Flow",
   "description": "Controlled AI development workflow that analyzes requirements and repository evidence, classifies risk, locks scope, obtains human approval, then executes the approved work or saves it as a resumable task.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "webszy",
   "license": "MIT",
   "repository": "https://github.com/webszy/my-skills",
@@ -28,6 +28,7 @@
     "references/karpathy-guidelines.md",
     "references/boundary-cases.md",
     "references/task-handoff.md",
+    "references/execution-progress.md",
     "components/cdtask/COMPONENT.md",
     "components/cdtask/references/task-templates.md",
     "components/cdtask/references/persistence.md"
