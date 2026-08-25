@@ -210,13 +210,15 @@ Before implementation, CDF:
 
 1. validates `task_contract: cdf-cdtask/v1` and every required section;
 2. extracts both canonical payloads under the fixed boundaries and requires their recomputed digests to match the persisted baselines;
-3. compares workspace, branch, commit, `Source-Worktree-State`, relevant `Source-Worktree-Changes`, current code, and dependencies;
-4. rechecks assumptions, stop conditions, phase boundaries, partial exclusions, acceptance criteria, and verification obligations;
-5. determines whether the approved implementation meaning is still valid.
+3. runs a **Code Evidence Diff**: compares the current branch, commit, and content of files that overlap the task's write scopes and protected areas against `Source-Branch`, `Source-Commit`, and `Source-Worktree-Changes` saved in the task.
 
-A missing, legacy, or unrecognized contract is rejected without code changes. Material drift, a failed assumption, new scope, changed risk, or changed acceptance returns to planning and renewed approval.
+A missing, legacy, or unrecognized contract is rejected without code changes.
 
-After validation succeeds, the explicit `$cdf continue task <path>` request creates the following current-turn `Resume Authorization Record`:
+**Fast-Resume Path** — if no commits touch files overlapping the task's write scopes or protected areas since `Source-Commit`, and the worktree has no relevant uncommitted changes in those paths, proceed directly to the Resume Authorization Record below.
+
+**Full-Replan Path** — if commits or uncommitted changes touch files in the task's write scopes or protected areas, return to CDF planning. The saved task's `Requirement Understanding`, `Evidence Summary`, `Risk Gate Result`, `Scope Lock`, `Technical Approach`, and `Implementation Plan` are the starting context. Only the changed files are re-inspected; the Evidence Summary is updated, risk re-assessed, the Development Plan and Scope Lock revised where needed, and renewed approval obtained before executing.
+
+After the Fast-Resume Path passes, or after renewed approval on the Full-Replan Path, the explicit `$cdf continue task <path>` request creates the following current-turn `Resume Authorization Record`:
 
 ```markdown
 ## Resume Authorization Record

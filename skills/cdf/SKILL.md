@@ -379,18 +379,34 @@ For a persisted task, compute and store a SHA-256 digest for each exact payload 
 
 For an explicit continue request:
 
-1. read the task document from the supplied path;
+1. Read the task document from the supplied path;
 2. require `task_contract: cdf-cdtask/v1` and validate every required section;
 3. apply [Integrity Verification](#integrity-verification), recompute both required payload digests, and require the persisted canonical Scope Lock and Approval Record to match their saved payloads;
-4. compare the current workspace, branch, commit, `Source-Worktree-State`, relevant `Source-Worktree-Changes`, code, and dependencies with the saved traceability for material drift;
-5. re-check assumptions, stop conditions, phase boundaries, partial-approval exclusions, acceptance criteria, and verification obligations;
-6. decide whether the approved implementation meaning is still valid.
+4. run a **Code Evidence Diff**: compare the current branch, commit, and content of files that overlap the task's write scopes and protected areas against `Source-Branch`, `Source-Commit`, and `Source-Worktree-Changes` saved in the task.
 
 Reject a missing, legacy, or unrecognized task contract without modifying code.
 
-Material drift, a failed assumption, new scope, changed risk, or changed acceptance returns to planning and renewed approval. Do not execute a stale task.
+### Fast-Resume Path
 
-When validation succeeds, the user's explicit `continue task <path>` request is the new current-turn action authorization. Resolve the path absolutely and create this runtime record without modifying the persisted task or its Approval Record:
+If the Code Evidence Diff finds no commits touching files that overlap the task's write scopes or protected areas since `Source-Commit`, and the worktree has no relevant uncommitted changes in those paths, proceed directly to the Resume Authorization Record below.
+
+### Full-Replan Path
+
+If the Code Evidence Diff finds commits or uncommitted changes that touch files in the task's write scopes or protected areas, return to CDF planning. Use the saved task's `### Requirement Understanding`, `### Evidence Summary`, `### Risk Gate Result`, `### Scope Lock`, `### Technical Approach`, and `### Implementation Plan` as the starting context. Re-inspect only the changed files, update the Evidence Summary, re-assess risk, revise the Development Plan and Scope Lock where needed, and obtain renewed approval before executing. Do not execute a stale task.
+
+When the Fast-Resume Path applies, or after renewed approval on the Full-Replan Path, the user's explicit `continue task <path>` request is the new current-turn action authorization. Resolve the path absolutely and create this runtime record without modifying the persisted task or its Approval Record:
+
+```markdown
+## Resume Authorization Record
+- User Request: <verbatim current continue request>
+- Task Path: <resolved absolute path>
+- Authorized Action: Execute Saved Approved Scope
+- Scope Source: persisted cdf-scope/v1
+- Authorization Context: <timestamp when available, otherwise current conversation turn>
+- Code Changes Authorized In This Turn: Yes
+```
+
+Only after this record exists may CDF execute tasks in dependency order under the same guardrails as `Execute Now`. Before the first code change, read [references/execution-progress.md](references/execution-progress.md), then create or validate the task's `cdf-execution-progress/v1` sidecar. Mark a task `in_progress` before modifying its Write Scope and `verified` only after its canonical acceptance mappings and actually performed checks pass. On a later resume, skip only `verified` tasks; inspect repository evidence before continuing an `in_progress` or `blocked` task. The sidecar is mutable execution metadata, but the saved task, canonical Scope Lock, and Approval Record remain immutable. A request merely to inspect, review, summarize, or validate a task neither creates a Resume Authorization Record nor authorizes implementation or progress mutation. Resolve the path absolutely and create this runtime record without modifying the persisted task or its Approval Record:
 
 ```markdown
 ## Resume Authorization Record

@@ -210,13 +210,15 @@ $cdf continue task <path>
 
 1. 验证 `task_contract: cdf-cdtask/v1` 和全部必需区块；
 2. 按固定边界提取规范 Scope Lock 和 Approval Record，并要求重新计算的摘要与持久化基线一致；
-3. 比较 workspace、branch、commit、`Source-Worktree-State`、相关 `Source-Worktree-Changes`、当前代码和依赖；
-4. 重新检查假设、停止条件、阶段边界、部分批准排除项、验收标准和验证义务；
-5. 判断已批准的实现含义是否仍然有效。
+3. 执行**代码证据 Diff**：将当前 branch、commit 以及任务 write scopes 和 protected areas 涉及文件的内容，与任务文件中保存的 `Source-Branch`、`Source-Commit` 和 `Source-Worktree-Changes` 进行比对。
 
-缺失、旧版或无法识别的 contract 会在不修改代码的情况下被拒绝。Material drift、失效假设、新范围、风险变化或验收变化必须返回规划并重新审批。
+缺失、旧版或无法识别的 contract 会在不修改代码的情况下被拒绝。
 
-验证成功后，显式 `$cdf continue task <path>` 请求会创建如下本回合 `Resume Authorization Record`：
+**Fast-Resume Path** — 如果自 `Source-Commit` 以来没有任何提交触及任务 write scopes 或 protected areas 的文件，且 worktree 在这些路径上也没有相关未提交改动，直接进入以下 Resume Authorization Record。
+
+**Full-Replan Path** — 如果有提交或未提交的改动触及了任务 write scopes 或 protected areas 的文件，返回 CDF 规划。以保存任务中的 `Requirement Understanding`、`Evidence Summary`、`Risk Gate Result`、`Scope Lock`、`Technical Approach` 和 `Implementation Plan` 作为起点，只重新检查变动的文件，更新 Evidence Summary，重新评估风险，必要时修订 Development Plan 和 Scope Lock，获得新审批后再执行。
+
+Fast-Resume Path 通过后，或 Full-Replan Path 重新获得审批后，显式 `$cdf continue task <path>` 请求会创建如下本回合 `Resume Authorization Record`：
 
 ```markdown
 ## Resume Authorization Record
