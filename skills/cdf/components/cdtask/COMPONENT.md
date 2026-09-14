@@ -63,6 +63,7 @@ Both fields are optional. They are routing and naming metadata only and cannot c
 The handoff must also contain:
 
 - the approved Development Plan copied verbatim, without splitting, renaming, or regenerating its sections;
+- the exact user-facing Approval Summary that the user approved, preserved separately from the full document plan when approval was summary-based;
 - one canonical `cdf-scope/v1` Scope Lock inside that plan's `### Scope Lock` section;
 - the immutable Approval Record covering that plan and Scope Lock and selecting **Save as Task**;
 - Approved Phase Boundary when applicable;
@@ -89,6 +90,10 @@ The approved Development Plan carries these headings in this order:
 
 Carry the content under every heading verbatim. Do not create parallel `Evidence`, `Risks and Rollback`, Acceptance Criteria, Verification Strategy, or other planning sections during handoff. For Level S or M, `### Rollback Plan` may be a concise reversible action or `None` when rollback is genuinely not applicable; do not manufacture filler.
 
+CDF assembles this full format from the already-approved planning material before handoff. The user normally saw the concise four-section summary (or the S fast path), not these eleven sections. CDTask must preserve both that summary and CDF's frozen full plan, checking that the plan adds no undisclosed scope, decision, acceptance requirement, or verification obligation. The separate Approval Summary is historical approval evidence, not a second plan or Scope Lock. CDTask never asks for renewed approval merely because the file has more sections than the chat summary.
+
+When CDF establishes that the user explicitly approved the complete displayed plan instead, that verbatim plan is the approval basis and no separate Approval Summary is required. Do not duplicate the full plan or its Scope Lock to fill a summary section. This also applies when validating older tasks approved from a displayed full plan; it never excuses a missing summary for summary-based approval.
+
 `Risk-Level` is inherited metadata. CDTask must not reinterpret or recalculate it.
 
 Reject every other input route. Do not translate an unsupported input into this contract, ask the user planning questions, or construct missing approval evidence. Return the defect to CDF.
@@ -99,9 +104,9 @@ Before decomposition, verify all of the following:
 
 1. The contract version, handoff type, approval state, and risk value exactly match the supported values.
 2. Workspace, branch, commit, worktree state, a legal `Source-Worktree-Changes` array, `Save-Drift-Preflight`, and `Save-Drift-Notes` are present, using `Unavailable` only where the contract permits it. Require `matched` with `none`, or `non-material-drift` with concise supporting notes. Treat them as the latest metadata from CDF's pre-save drift preflight; do not perform a second repository-planning pass.
-3. The Approval Record unambiguously binds the approved Development Plan and canonical Scope Lock and records **Save as Task** as the approved next action.
+3. The Approval Record binds the preserved user-facing Approval Summary, or the explicitly approved displayed full plan, and records **Save as Task** as the approved next action. The full Development Plan and canonical Scope Lock must faithfully represent that displayed approval; internal detail is not independent authorization.
 4. The Development Plan has the canonical headings in the required order and has not been split, renamed, or regenerated.
-5. Canonical `in_scope` and `acceptance_criteria` are both non-empty, and the plan's `### Acceptance Criteria` is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`.
+5. Canonical `in_scope` and `acceptance_criteria` are both non-empty, and the plan's `### Acceptance Criteria` is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`. After decomposition, require every canonical acceptance entry to have at least one task mapping and a corresponding planned check; valid individual mappings alone do not establish complete coverage.
 6. The package has no contradiction among the Development Plan, Scope Lock, phase boundary, Approval Record, and partial-approval material.
 7. The approved evidence is sufficient to define tasks and write scopes without inventing paths, interfaces, modules, dependencies, or behavior.
 
@@ -203,6 +208,8 @@ Do not fabricate paths. If the approved package identifies only an area, keep th
 ### Scope Guard
 
 After decomposition, complete the Scope Guard defined in [Task Templates](references/task-templates.md#scope-guard-output). Every item must be actually validated and checked before persistence.
+
+Check mappings in both directions: tasks may reference only canonical acceptance entries, and every canonical entry must be covered. Missing coverage prevents `READY` and persistence. Repair a mechanical omission as `NOT_READY` only when the approved plan already supplies the required work and verification; semantic changes follow the applicable `BLOCKED` route.
 
 ## Compilation Gate
 

@@ -1,6 +1,6 @@
 # CDF Saved-Task Execution Progress
 
-Read this reference only after CDF has validated a saved `cdf-cdtask/v1` document, created the current-turn Resume Authorization Record, and is about to execute or resume its tasks.
+Read this reference during saved-task validation to inspect any existing sidecar read-only and reconcile repository changes before choosing a resume route. Creating or updating progress still requires successful CDF resume validation and the current-turn Resume Authorization Record.
 
 The saved task is immutable definition and approval evidence. Runtime progress lives in a separate mutable sidecar; it never changes scope, acceptance, risk, dependencies, write scope, approval, or execution authorization.
 
@@ -54,19 +54,20 @@ blocked -> in_progress
 - Write `verified` only after every mapped canonical acceptance criterion is satisfied and the applicable planned checks were actually run successfully. Record concise observable evidence; never record a planned check as performed.
 - Write `blocked` with the concrete reason when work cannot continue inside approved scope.
 - Never move `verified` backward merely to rerun work. New evidence that invalidates a verified result follows CDF drift and replanning rules.
-- Set `overall_state: completed` and `completed_at` only when every task is `verified` and the final scoped review has no unresolved in-scope finding.
+- Set `overall_state: completed` and `completed_at` only when every task is `verified`, every canonical acceptance entry has task coverage and current successful verification evidence, and the final scoped review has no unresolved in-scope finding. Check the complete canonical array item by item; all tasks being `verified` cannot substitute for this check. Store the criterion-to-check evidence in the applicable tasks' `verification_evidence`. Any uncovered, failed, or unverified entry prevents completion.
 - Update the sidecar atomically so interruption cannot leave a partially written progress record.
 
 ## Resume and Reconciliation
 
 On every resume:
 
-1. validate the saved task and current authorization before reading progress as executable state;
-2. validate the sidecar contract, paths, task IDs, hashes, timestamps, state values, and dependency consistency;
-3. skip only tasks marked `verified` whose evidence still applies to the current repository;
-4. inspect repository state before continuing an `in_progress` task, then finish or re-verify it without blindly repeating non-idempotent work;
-5. re-check a `blocked` task's reason before moving it to `in_progress`;
-6. execute a `pending` task only after all dependencies are `verified`.
+1. validate the saved task, then read any existing sidecar without mutation and validate its contract, paths, task IDs, hashes, timestamps, state values, and dependency consistency;
+2. reconcile actual committed and uncommitted changes against the saved plan, evidence dependencies, and recorded progress. Attribute normal approved output only when repository evidence supports it; a state label, timestamp, or overlapping path alone is insufficient. Inspect unexplained changes and stop as `BLOCKED` if attribution remains ambiguous. Attributable approved output is not automatically material drift;
+3. finish CDF's assumption and drift checks and select its resume route. Material drift uses the Full-Replan Path; preserve the old task and sidecar binding and never use them to track a newly approved plan;
+4. only after the Fast-Resume Path passes and its Resume Authorization Record exists, create or update progress and skip tasks marked `verified` whose evidence still applies to the current repository;
+5. inspect repository state before continuing an `in_progress` task, then finish or re-verify it without blindly repeating non-idempotent work;
+6. re-check a `blocked` task's reason before moving it to `in_progress`;
+7. execute a `pending` task only after all dependencies are `verified`.
 
 If no sidecar exists, reconcile current repository evidence against every task Write Scope before initializing all tasks as `pending`. If overlapping changes make prior execution ambiguous, create no optimistic status and stop as `BLOCKED` for explicit reconciliation. Never infer completion from a changed file alone.
 

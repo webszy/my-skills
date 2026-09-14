@@ -66,7 +66,18 @@ The S/M/L/XL risk model is unchanged. Risk is determined from impact, blast radi
 
 Risk signals provide evidence and may establish a floor; a signal is not automatically the final level. CDF first runs the compact S Reverse Check in `SKILL.md`. A definite Level S candidate does not load the full risk reference; any failed or unknown S row, or any plausible non-S category, loads `risk-classification.md` and its complete signal record. An unresolved `UNKNOWN` forbids a level below the lowest plausible risk. If CDF cannot produce a safely bounded plan, or if conflicting evidence changes meaning, scope, acceptance, or safety, it stops as `BLOCKED`.
 
-Planning depth follows the level. Level S uses the fast path below; Level M, L, and XL use the full Development Plan.
+Planning depth follows the level. Level S uses the fast path below. Level M/L/XL still receive complete analysis, but the default approval message is a concise summary; the eleven-section format belongs to the handoff and saved task.
+
+### Concise Approval Display
+
+Use the user's language and normally one to three short points per section:
+
+- **Requirement Understanding** — outcome, scope, and important exclusions.
+- **Technical Approach** — the proposed solution and decisions requiring approval.
+- **Implementation Plan** — short steps, observable acceptance, and how to check it.
+- **Risks** — material risks, assumptions or conditions, and rollback implications.
+
+End with one choice: approve and execute, or approve and save as task. Keep important conditions and XL phase boundaries visible, but leave evidence inventories, risk tables, canonical YAML, and raw approval/progress records out of chat unless requested. Approval covers only the meaning shown; the internal scope cannot introduce hidden obligations. After approval, confirm in one short sentence.
 
 ### Level S Fast Path
 
@@ -84,11 +95,11 @@ Approve and execute? Or save as task?
 
 The fast path requires every S Reverse Check row to pass with no `UNKNOWN`. The signal record and reverse check are reasoning steps at this level, reported only as the aggregate `Reverse Check` line. Approval is still explicit: the user names both the approved change and the authorized action.
 
-CDF leaves the fast path and produces a full Development Plan as soon as evidence shows a second target, behavioral impact, a shared consumer, or any signal that was assumed `CLEAR`. Choosing **Save as Task** also requires promotion to a full plan, because the task contract carries a canonical Scope Lock; the risk level stays `Level S`.
+CDF leaves the fast path, reassesses risk, and shows the concise summary if evidence reveals a second target, behavior, shared consumers, or another signal. After approval of **Save as Task**, CDF maps the S fast path into the full document plan and canonical scope without changing meaning; risk stays `Level S`. Formatting alone does not require renewed approval.
 
 ### Development Plan Contract
 
-Every approval-ready full Development Plan at Level M, L, or XL, plus a Level S plan promoted for **Save as Task**, uses these canonical headings in this order:
+For **Save as Task** at every risk level, CDF organizes already-approved planning material into these eleven canonical document headings before handoff. They are not the default chat approval format:
 
 1. `Requirement Understanding`
 2. `Evidence Summary`
@@ -102,11 +113,11 @@ Every approval-ready full Development Plan at Level M, L, or XL, plus a Level S 
 10. `Verification Strategy`
 11. `Next Action`
 
-The headings are carried directly into a handoff or saved task; they are not renamed, combined, split, or regenerated. Level S uses the fast path instead, and adopts these headings only when promoted for **Save as Task**. `Rollback Plan` may be concise or genuinely `None` for Level S or M, while Level L and XL require the additional detail described in [SKILL.md](SKILL.md).
+CDF checks the assembled plan against the exact approved summary, freezes it, and hands it to the compiler for verbatim persistence. The saved file also preserves the displayed summary as approval evidence. Formatting adds no authority and does not trigger a second approval; newly discovered scope, decisions, acceptance, or verification obligations require an updated concise summary and renewed approval. **Execute Now** uses the approved planning record directly without rendering eleven sections. `Rollback Plan` may be concise or genuinely `None` for S/M; L/XL retain the detail required by [SKILL.md](SKILL.md).
 
 ### Scope Lock and Acceptance Authority
 
-Every approval-ready full plan contains exactly one canonical `cdf-scope/v1` block with eight fields, in this order, including a Level S plan promoted for **Save as Task**:
+M/L/XL planning prepares one internal canonical `cdf-scope/v1` block before approval. Every saved plan contains one such block, including S tasks mechanically mapped from the approved fast path. Its eight fields are internal and saved-file content, not a mandatory chat display:
 
 - `in_scope`
 - `out_of_scope`
@@ -117,20 +128,20 @@ Every approval-ready full plan contains exactly one canonical `cdf-scope/v1` blo
 - `will_not_change`
 - `acceptance_criteria`
 
-Every field must exist and the order is fixed, because integrity verification derives the payload boundary from the first and last field. `in_scope` and `acceptance_criteria` must each contain at least one non-empty entry before approval; the other arrays may be empty. A partial or conditional result with no approved `in_scope` item is `BLOCKED`. After approval, the canonical block is immutable. Execution and task compilation may not paraphrase, reorder, widen, weaken, normalize, re-indent, or silently add scope.
+Every field must exist in the fixed order. `in_scope` and `acceptance_criteria` must each contain at least one non-empty entry; other arrays may be empty. A partial or conditional result with no approved item is `BLOCKED`. After approval, or mechanical mapping of an approved S task, the block is immutable. Execution and compilation may not rewrite it or add scope. Every material obligation must be exposed in the approval summary; internal content alone is not authorization.
 
 The single `cdf-scope/v1` block is the sole canonical scope authority, and its `acceptance_criteria` field is the sole canonical acceptance source. The Development Plan’s `Acceptance Criteria` section is only a readable projection: it repeats every canonical criterion item for item, in the same order and exact wording. It may not add, delete, weaken, broaden, reinterpret, merge, or split a criterion. Task-level criteria may reference only applicable canonical entries verbatim. A newly required or changed criterion is a scope change and requires renewed planning and approval.
 
 ### Human Approval
 
-Approval is required at every risk level. It must identify both the approved plan, Scope Lock, phase, or subset and one authorized action:
+Approval is required at every risk level. It identifies the displayed concise plan (or full plan when requested), phase, or subset and one authorized action:
 
 1. **Execute Now**
 2. **Save as Task**
 
-Replies such as `ok`, `continue`, `可以`, or `looks good` are insufficient when scope or action remains ambiguous. CDF supports full, conditional, and partial approval. Conditions are incorporated into a revised Scope Lock before approval.
+Replies such as `ok`, `continue`, `可以`, or `looks good` are insufficient when scope or action remains ambiguous. CDF supports full, conditional, and partial approval. Conditions are incorporated into the working Scope Lock and shown in the revised concise summary before approval.
 
-For partial approval, the plan’s one canonical Scope Lock is revised to contain only the safely separable approved subset, while unapproved items remain verbatim and are protected through canonical exclusions. CDF also emits a stable `Partial Approval Result` containing the approval type, verbatim approved items, verbatim unapproved items, and only the canonical version marker. This result is an audit projection: it does not copy the complete Scope Lock and creates no second source of authority.
+For partial approval, the canonical scope contains only the safely separable approved subset and protects the remainder. Chat briefly identifies that boundary. The structured `Partial Approval Result` stays internal and is copied into saved tasks; it is audit evidence, not another Scope Lock. Approval and phase records follow the same display rule: show concise meaning in chat and full records in the saved file unless requested.
 
 An Approval Record identifies the approved boundary and selected action. For **Save as Task**, that record authorizes persistence only and explicitly does not authorize code changes in the approval turn or during a future resume. Its content remains unchanged after saving.
 
@@ -176,6 +187,7 @@ The internal task compiler:
 
 - preserves the canonical Scope Lock and Approval Record verbatim;
 - validates the `Acceptance Criteria` projection against `cdf-scope/v1.acceptance_criteria`;
+- requires every canonical acceptance entry to have at least one task mapping and a corresponding planned check;
 - compiles stable, dependency-aware tasks without making new product or technical decisions;
 - preserves a partial-approval audit projection without duplicating the Scope Lock;
 - runs a Scope Guard;
@@ -184,7 +196,7 @@ The internal task compiler:
 
 If compilation needs new scope, an interface, dependency, architecture decision, changed acceptance criterion, insufficient Scope Lock, or an inseparable partial remainder, it returns `BLOCKED` to CDF planning for renewed approval.
 
-An approved Level S fast path has no canonical Scope Lock, so it cannot be handed off directly. CDF first promotes it to a full Development Plan and obtains approval of that plan; the risk level stays `Level S`.
+An approved Level S fast path cannot be handed off directly. CDF first maps it into the complete document format and full Approval Record using the original approval statement; risk stays `Level S`. This mechanical expansion does not require renewed approval unless new meaning is discovered.
 
 For a request whose deliverable is a task breakdown, **Save as Task** produces the durable task definition. **Execute Now** means implementing the approved underlying development work; it does not produce an unsaved task list.
 
@@ -210,15 +222,18 @@ Before implementation, CDF:
 
 1. validates `task_contract: cdf-cdtask/v1` and every required section;
 2. extracts both canonical payloads under the fixed boundaries and requires their recomputed digests to match the persisted baselines;
-3. runs a **Code Evidence Diff**: compares the current branch, commit, and content of files that overlap the task's write scopes and protected areas against `Source-Branch`, `Source-Commit`, and `Source-Worktree-Changes` saved in the task.
+3. validates any existing progress sidecar read-only before selecting a resume route;
+4. runs a **Code Evidence Diff** over write scopes, protected areas, and read-only evidence dependencies such as APIs, configuration, schemas, and callers. It compares committed and uncommitted content with source revisions and the Evidence Summary's content baselines; matching Git status entries alone do not prove unchanged content;
+5. reconciles actual changes with validated progress, distinguishing pre-existing work, attributable approved output, non-material external drift, and material or unexplained changes;
+6. revalidates assumptions, stop conditions, shared contracts, acceptance, verification, rollback, and the phase boundary.
 
 A missing, legacy, or unrecognized contract is rejected without code changes.
 
-**Fast-Resume Path** — if no commits touch files overlapping the task's write scopes or protected areas since `Source-Commit`, and the worktree has no relevant uncommitted changes in those paths, proceed directly to the Resume Authorization Record below.
+**Fast-Resume Path** — after all checks pass, the saved plan must remain valid and evidence must be unchanged or every difference explained as approved execution output or non-material drift. Normal output from an interrupted approved task does not itself require renewed approval. Missing baselines, invalid sidecar bindings, or unresolved attribution cannot be treated as a clean diff; follow CDF's evidence-gap and reconciliation rules.
 
-**Full-Replan Path** — if commits or uncommitted changes touch files in the task's write scopes or protected areas, return to CDF planning. The saved task's `Requirement Understanding`, `Evidence Summary`, `Risk Gate Result`, `Scope Lock`, `Technical Approach`, and `Implementation Plan` are the starting context. Only the changed files are re-inspected; the Evidence Summary is updated, risk re-assessed, the Development Plan and Scope Lock revised where needed, and renewed approval obtained before executing.
+**Full-Replan Path** — material drift returns to planning. Reinspect changed sources and affected dependencies or assumptions, revise the plan and Scope Lock where needed, and obtain approval of the new plan and action. This ends the old task's resume route even if the Scope Lock wording stays unchanged. **Execute Now** follows 7A using the new plan and Approval Record; **Save as Task** follows 7B to create a new document at a distinct path and stops until a later explicit continue request targets it. Preserve the old task and sidecar binding; do not record new-plan work or copy old runtime statuses into a new sidecar.
 
-After the Fast-Resume Path passes, or after renewed approval on the Full-Replan Path, the explicit `$cdf continue task <path>` request creates the following current-turn `Resume Authorization Record`:
+Only after the Fast-Resume Path passes does the explicit `$cdf continue task <path>` request create this current-turn `Resume Authorization Record` for the unchanged saved definition:
 
 ```markdown
 ## Resume Authorization Record
@@ -231,6 +246,8 @@ After the Fast-Resume Path passes, or after renewed approval on the Full-Replan 
 ```
 
 Only then may CDF execute the saved approved scope in dependency order. Before the first code change, CDF creates or validates `<saved-task-path>.progress.yaml` using `cdf-execution-progress/v1`. The sidecar records `pending`, `in_progress`, `verified`, or `blocked`; resume skips only still-applicable `verified` tasks and inspects interrupted work before continuing. The record and sidecar do not modify the saved task or its Approval Record. A request only to inspect, review, summarize, or validate a task creates no Resume Authorization Record and authorizes no implementation or progress mutation.
+
+Completion requires every task to be verified, every canonical acceptance entry to have coverage and current successful verification evidence, and the final scoped review to have no unresolved in-scope finding. All tasks being verified is not sufficient on its own.
 
 ## Boundaries
 

@@ -29,7 +29,8 @@ Task compilation is an internal CDF component. There is no top-level tasking Ski
 
 ### Contract essentials
 
-- The Development Plan uses these canonical headings in order: `Requirement Understanding`, `Evidence Summary`, `Risk Gate Result`, `Scope Lock`, `Technical Approach`, `Implementation Plan`, `Risks`, `Rollback Plan`, `Acceptance Criteria`, `Verification Strategy`, and `Next Action`.
+- Chat approval normally shows a concise `Requirement Understanding`, `Technical Approach`, `Implementation Plan`, and `Risks`, followed by one execute/save choice. Level S keeps its four-line fast path. Full contract details are shown only on request.
+- The eleven-section Development Plan is the handoff and saved-task file format. After **Save as Task** approval, CDF organizes the approved material into that format and preserves the exact displayed summary as approval evidence. Formatting alone does not require a second approval; hidden obligations are never authorized.
 - The single `cdf-scope/v1` block is the sole canonical scope authority, and its `acceptance_criteria` field is the sole canonical acceptance source. Approval-ready `in_scope` and `acceptance_criteria` arrays must both be non-empty. The Development Plan’s `Acceptance Criteria` section is only an item-for-item, same-order, verbatim projection.
 - For partial approval, `Partial Approval Result` is an audit projection of approved and unapproved items. It does not copy the complete Scope Lock or create a second authority source.
 - Before saving, CDF performs a drift preflight and records current `Workspace`, `Source-Branch`, `Source-Commit`, `Source-Worktree-State`, and relevant `Source-Worktree-Changes`. Material drift returns to planning and renewed approval.
@@ -42,6 +43,8 @@ $cdf continue task <path>
 ```
 
 CDF validates the task contract and required sections, integrity digests, current repository state, assumptions, stop conditions, and material drift. After validation succeeds, the explicit continue request creates a current-turn `Resume Authorization Record`; only then may saved work execute. Before the first code change, CDF creates or validates the separate `cdf-execution-progress/v1` sidecar, skips only still-applicable `verified` tasks, and inspects interrupted work before continuing. Inspecting, reviewing, summarizing, or validating a task authorizes neither execution nor progress mutation.
+
+Resume checks include read-only evidence dependencies and read-only reconciliation of existing progress, so normal approved execution output does not itself force replanning. Material drift ends the old resume route: newly approved work executes under the new plan or is saved at a new task path. Compilation requires full canonical acceptance coverage, and completion requires successful evidence for every canonical entry.
 
 CDF is configured for explicit invocation. Common forms include `$cdf`, `/cdf`, `cdf:`, and `controlled-development-flow`.
 

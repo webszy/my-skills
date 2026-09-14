@@ -49,10 +49,9 @@ Run checks in proportion to risk and project capability. Do not claim a check pa
 
 ## Respect control boundaries
 
-- Approval authorizes only the displayed canonical Scope Lock and selected next action.
+- Approval authorizes only the meaning exposed in the displayed concise plan and the selected next action. The internal canonical Scope Lock must faithfully represent it; hidden planning details cannot create authority. Display full contract detail only when the user requests it.
 - Do not infer permission for adjacent cleanup, dependency changes, protected areas, or a broader rollout.
 - A task document or passing test does not authorize scope expansion.
 - If safe completion requires new modules, interfaces, behavior, acceptance criteria, or broader write scope, stop and return to CDF planning for a revised Scope Lock and renewed approval.
 
 For worked examples, read [Boundary Cases](boundary-cases.md).
-

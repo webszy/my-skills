@@ -29,7 +29,8 @@ CDF 让小改动保持轻量，同时对高风险、敏感、跨域或架构级�
 
 ### 合同要点
 
-- Development Plan 按固定顺序使用这些规范标题：`Requirement Understanding`、`Evidence Summary`、`Risk Gate Result`、`Scope Lock`、`Technical Approach`、`Implementation Plan`、`Risks`、`Rollback Plan`、`Acceptance Criteria`、`Verification Strategy` 和 `Next Action`。
+- 聊天审批默认精简展示需求理解、技术方案、实施步骤、风险，最后选择执行或保存。S 级保持四行快速路径；完整契约细节只在用户要求时展开。
+- 固定 11 章节的 Development Plan 用于 handoff 和 task 文件。**Save as Task** 获批后，CDF 整理已批准内容，并保留实际展示过的摘要作为审批证据。仅展开格式不需要二次审批，隐藏义务不构成授权。
 - 唯一的 `cdf-scope/v1` 区块是范围的唯一规范授权源，其中的 `acceptance_criteria` 字段是验收标准的唯一规范源。可审批的 `in_scope` 和 `acceptance_criteria` 数组都必须非空。Development Plan 的 `Acceptance Criteria` 只是逐项、同序、逐字投影。
 - 部分批准时，`Partial Approval Result` 只是已批准项与未批准项的审计投影；它不复制完整 Scope Lock，也不产生第二个授权源。
 - 保存前，CDF 会执行 drift preflight，并记录当前 `Workspace`、`Source-Branch`、`Source-Commit`、`Source-Worktree-State` 和相关的 `Source-Worktree-Changes`。Material drift 必须返回规划并重新审批。
@@ -42,6 +43,8 @@ $cdf continue task <path>
 ```
 
 CDF 会验证 task contract 和必需区块、完整性摘要、当前仓库状态、假设、停止条件及 material drift。验证成功后，显式 continue 请求会创建本回合的 `Resume Authorization Record`；只有此后才能执行已保存工作。首次修改代码前，CDF 会创建或验证独立的 `cdf-execution-progress/v1` sidecar，只跳过证据仍适用的 `verified` 任务，并在继续前检查中断任务。仅检查、审阅、总结或验证任务既不授权执行，也不授权修改进度。
+
+恢复检查覆盖只读证据依赖，并先只读核对已有进度，因此正常的已批准执行产出本身不会触发重新规划。实质漂移会结束旧任务恢复路径：重新批准的工作使用新计划执行，或保存到新任务路径。编译必须覆盖全部规范验收标准，结项必须逐条具备成功验证证据。
 
 CDF 配置为显式调用。常用形式包括 `$cdf`、`/cdf`、`cdf:` 和 `controlled-development-flow`。
 

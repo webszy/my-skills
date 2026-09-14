@@ -66,17 +66,20 @@ Persist the sections below in this order. Copy approved planning material verbat
 
 1. **Title**
 2. **CDF Resume Contract**
-3. **Development Plan** — verbatim, including its sole canonical `cdf-scope/v1` block
-4. **Approved Phase Boundary**, when applicable
-5. **Approval Record** — verbatim and immutable
-6. **Partial Approval Result**, when applicable, in the stable format below
-7. **Dependency Graph**
-8. **Dependency Data**
-9. **Task Definitions**
-10. **Scope Guard**
-11. **Future CDF Execution Constraints**
-12. **Compilation Gate Result**
-13. **Save Verification**
+3. **Approval Summary**, for summary-based approval — the exact summary displayed to and approved by the user, including the action question
+4. **Development Plan** — verbatim, including its sole canonical `cdf-scope/v1` block
+5. **Approved Phase Boundary**, when applicable
+6. **Approval Record** — verbatim and immutable
+7. **Partial Approval Result**, when applicable, in the stable format below
+8. **Dependency Graph**
+9. **Dependency Data**
+10. **Task Definitions**
+11. **Scope Guard**
+12. **Future CDF Execution Constraints**
+13. **Compilation Gate Result**
+14. **Save Verification**
+
+Preserve the Approval Summary as a fenced text payload under `## Approval Summary`, with its original text and line breaks; the wrapper is not part of the summary. Use a fence longer than any fence sequence in the payload. Its embedded headings are quoted approval evidence and are not additional Development Plan sections. CDF supplies this payload before handoff; CDTask must never reconstruct what the user saw from the full plan. The eleven sections below are required in the file, not in the default chat approval message. Tasks explicitly approved from a displayed full Development Plan, including older tasks, may lack the summary section: validate against that verbatim displayed plan and recorded approval without duplicating its Scope Lock, inventing a summary, or rewriting an existing document. This exception does not allow summary-based approvals to omit their summary.
 
 The persisted Development Plan must retain these approved headings in this order:
 
@@ -163,6 +166,7 @@ Reopen the exact destination and verify all of the following:
 - `task_contract`, `handoff_type`, `approval_state`, and definition `status` have the exact supported values;
 - workspace, branch, commit, worktree state, the legal path-scoped worktree changes array, save-drift preflight result and notes, risk, and timestamp traceability are present and match the handoff;
 - every required and applicable section is present;
+- the Approval Summary, when applicable, matches the displayed summary supplied by CDF verbatim; the Approval Record identifies approval of that summary or the explicitly displayed full plan, and the full plan and Scope Lock add no undisclosed meaning;
 - the Development Plan and all canonical headings are copied verbatim in the required order, with no regenerated parallel planning sections;
 - the plan contains exactly one canonical Scope Lock payload, and it matches the handoff payload line for line;
 - the plan's Acceptance Criteria is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`;
@@ -173,6 +177,7 @@ Reopen the exact destination and verify all of the following:
 - task IDs are unique and every dependency resolves;
 - the dependency graph is acyclic and matches Dependency Data and task fields;
 - every task maps only to approved scope and at least one applicable canonical acceptance entry quoted verbatim and in canonical order;
+- every canonical acceptance entry is covered by at least one task and a corresponding planned check; individual task mappings do not suffice without full coverage;
 - Scope Guard is fully checked;
 - Future CDF Execution Constraints and CDF-only resume rules are present;
 - the document contains no claim that planned implementation verification was performed;
@@ -184,11 +189,13 @@ Only after this pass succeeds, replace the provisional section with:
 ## Save Verification
 - [x] Frontmatter and traceability match the approved handoff.
 - [x] Required sections are present.
+- [x] The displayed approval basis (summary or explicitly approved full plan) is preserved and its approved meaning matches the full plan and Scope Lock.
 - [x] Verbatim Development Plan headings, sole canonical Scope Lock, and acceptance projection match.
 - [x] Immutable Approval Record and stable partial-approval projection are preserved.
 - [x] Required Scope Lock and Approval Record digests recompute and match.
 - [x] Source worktree changes and save-drift preflight metadata match.
 - [x] Task IDs and dependency data are internally consistent.
+- [x] Every canonical acceptance entry has task coverage and a corresponding planned check.
 - [x] Scope Guard and CDF-only resume constraints are present.
 - [x] The document grants no execution authority.
 - Verified At: <ISO-8601 timestamp>

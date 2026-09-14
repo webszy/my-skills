@@ -53,7 +53,7 @@ If evidence showed that the event drives billing, experiments, executive reporti
 
 ### Context
 
-CDF displayed a Development Plan and canonical Scope Lock, then asked the user to choose **Execute Now** or **Save as Task**.
+CDF displayed a concise approval summary, then asked the user to choose **Execute Now** or **Save as Task**. The canonical Scope Lock remains internal and must match that summary.
 
 ### Reply
 
@@ -66,7 +66,7 @@ The reply acknowledges the plan but does not unambiguously select execution or p
 ```markdown
 Before continuing, please choose what the approval authorizes:
 
-1. **Execute Now** — implement only the displayed Scope Lock.
+1. **Execute Now** — implement only the displayed plan.
 2. **Save as Task** — compile and persist the approved work; do not implement it now.
 
 If neither action is acceptable, describe the required plan or Scope Lock changes instead of approving it.
@@ -109,7 +109,7 @@ The provisional floor preserves safe controls while evidence is unresolved; it i
 
 > Leave permission behavior out; keep only the help-copy change.
 
-This is a scope revision, not approval of the earlier plan. Reinspect and classify the copy-only subset. If it is independently safe, display a new canonical Scope Lock and request explicit approval.
+This is a scope revision, not approval of the earlier plan. Reinspect and classify the copy-only subset. If it is independently safe, show an updated concise summary and request explicit approval. The internal canonical Scope Lock for that summary is illustrated below; the YAML need not be printed in chat.
 
 ```yaml
 Scope-Lock-Version: cdf-scope/v1
@@ -187,3 +187,23 @@ Do not blindly execute the task, but do not declare material drift from the comm
 The saved Approval Record still does not authorize execution. Only an explicit CDF continue request followed by successful contract, integrity, scope, assumption, and drift validation creates the current-turn Resume Authorization Record. Inspecting, reviewing, summarizing, or validating the task creates no such record and authorizes no code changes.
 
 See [Resume a Saved Task](../SKILL.md#resume-a-saved-task) and [Repository Drift](../SKILL.md#repository-drift) for the authoritative resume and drift rules.
+
+## Case 7: A read-only dependency changes
+
+A saved task changes a page but depends on an API response schema outside its Write Scope and protected areas. The API removes a field while the page remains unchanged. Include the schema in the Evidence Summary's dependencies and Code Evidence Diff; unchanged write targets do not qualify the task for fast resume. Revalidate the affected assumptions and replan if the contract change invalidates the approved implementation.
+
+## Case 8: Approved execution is interrupted
+
+TASK-001 has verified output and TASK-002 is in progress when execution stops. On an explicit continue request, validate the sidecar read-only and reconcile actual repository changes before classifying drift. If the changes are attributable approved output and the plan and evidence remain valid, resume without renewed approval, skip still-valid TASK-001, and inspect TASK-002 before continuing it. Do not infer attribution from a matching path or state label alone. Unexplained changes remain blocked for reconciliation.
+
+## Case 9: Replanning changes the task's target
+
+A renamed target makes the old Write Scope stale. Replan and obtain approval of the new plan and action. **Execute Now** uses that new plan's Scope Lock and Approval Record through 7A; it does not resume the old task. **Save as Task** creates a new document at a distinct path through 7B and stops until the user later explicitly continues that new task. Preserve the old document and progress binding in both cases, and never transfer old statuses blindly.
+
+## Case 10: A canonical acceptance entry has no task
+
+The canonical acceptance array contains A and B, but every task maps only to A. Even though each individual mapping is valid, the reverse coverage check fails: compilation cannot be `READY` or persisted. Restore B's task mapping and planned check only when the approved plan already supplies them; otherwise return to CDF planning. During execution, `completed` additionally requires current successful evidence for both A and B, not merely all existing tasks being `verified`.
+
+## Case 11: Concise approval, complete saved file
+
+For a bounded feature, show Requirement Understanding, Technical Approach, Implementation Plan, and Risks in the user's language, with a few short points and one action question. Include acceptance and checks in Implementation Plan and important exclusions or conditions in the relevant section. Do not print eleven headings, risk matrices, canonical YAML, or the raw Approval Record. When the user approves **Save as Task**, organize the approved material into the full eleven-section Development Plan, preserve the exact chat summary and approval statement, and save the complete task file. This formatting step does not require a second approval. For an S task, apply the same rule to its approved four-line fast path. If compilation reveals a new API change, acceptance requirement, or other material decision, show a revised concise summary and request renewed approval instead of hiding it in the file.

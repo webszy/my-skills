@@ -66,7 +66,18 @@ S/M/L/XL 风险模型保持不变。风险根据影响、爆炸半径、可逆�
 
 风险信号提供证据并可能设定风险下限，但不自动等于最终等级。CDF 先执行 `SKILL.md` 中的紧凑 S Reverse Check；明确属于 Level S 时不加载完整风险参考。任一 S 条件失败、未知或出现可能的非 S 类别时，才加载 `risk-classification.md` 及完整 signal record。未解决的 `UNKNOWN` 禁止采用低于最低合理风险的等级。CDF 无法生成安全且边界明确的计划，或冲突证据会改变含义、范围、验收或安全性时，必须停止为 `BLOCKED`。
 
-规划深度随等级变化。Level S 使用下面的快速路径；Level M、L 和 XL 使用完整 Development Plan。
+规划深度随等级变化。Level S 使用下面的快速路径。M／L／XL 仍需完成完整分析，但默认只展示精简审批摘要；固定 11 章节用于内部 handoff 和已保存 task 文件。
+
+### 精简审批展示
+
+使用用户的语言，每段通常一到三条简短内容：
+
+- **需求理解（Requirement Understanding）**：目标、范围和重要排除项。
+- **技术方案（Technical Approach）**：采用什么方案、哪些决策需要批准。
+- **实施步骤（Implementation Plan）**：简短步骤、可观察的验收结果及检查方式。
+- **风险（Risks）**：重要风险、假设或条件、回滚影响。
+
+最后用一句话选择：批准并执行，或批准并保存为 task。重要条件和 XL 阶段边界必须展示；证据清单、风险检查表、规范 YAML、原始审批及进度记录默认不在聊天中展开，用户要求时再展示。授权只覆盖已展示的含义，内部范围不能增加隐藏义务。批准后用一句话确认即可。
 
 ### Level S 快速路径
 
@@ -84,11 +95,11 @@ Approve and execute? Or save as task?
 
 快速路径要求 S Reverse Check 的每一行都通过且没有 `UNKNOWN`。在该等级上，信号记录和 Reverse Check 属于内部推理步骤，只以聚合的 `Reverse Check` 一行对外报告。批准依然必须显式：用户要同时说明获批的改动和授权动作。
 
-一旦证据显示存在第二个目标、行为影响、共享消费方，或任何此前被假定为 `CLEAR` 的信号，CDF 必须离开快速路径并产出完整 Development Plan。选择 **Save as Task** 同样要求提升为完整计划，因为任务 contract 携带规范 Scope Lock；风险等级仍保持 `Level S`。
+一旦证据显示第二个目标、行为影响、共享消费方或其它信号，CDF 必须离开快速路径，重新判断风险并展示精简摘要。批准 **Save as Task** 后，CDF 将 S 级快速计划映射为完整文档计划和规范范围，含义不变，风险仍为 `Level S`。仅展开文档格式不需要再次批准。
 
 ### Development Plan 合同
 
-Level M、L 和 XL 的每个可审批完整 Development Plan，以及为 **Save as Task** 提升的 Level S 计划，都按以下顺序使用规范标题：
+所有风险等级在 **Save as Task** 获批后，均由 CDF 将已批准的规划内容整理为以下 11 个文档章节，再进行内部 handoff。这不是默认的聊天审批格式：
 
 1. `Requirement Understanding`
 2. `Evidence Summary`
@@ -102,11 +113,11 @@ Level M、L 和 XL 的每个可审批完整 Development Plan，以及为 **Save 
 10. `Verification Strategy`
 11. `Next Action`
 
-Handoff 或已保存任务会直接携带这些标题，不得重命名、合并、拆分或重新生成。Level S 改用快速路径，只有在为 **Save as Task** 提升为完整计划时才采用这些标题。Level S 或 M 的 `Rollback Plan` 可以很简洁，或在确实不适用时使用 `None`；Level L 和 XL 则必须包含 [SKILL.md](SKILL.md) 规定的额外细节。
+CDF 将整理后的计划与批准摘要核对，冻结后交给 compiler 原样保存。文件还会保留实际展示过的摘要作为审批证据。格式展开不产生新授权，也不触发二次审批；若发现新增范围、决策、验收或验证义务，则展示更新后的精简摘要并重新审批。**Execute Now** 直接使用已批准的规划记录，不要求展开 11 章节。S／M 的回滚说明可以很短或在确实不适用时写 `None`；L／XL 仍保留 [SKILL.md](SKILL.md) 要求的完整细节。
 
 ### Scope Lock 与验收授权源
 
-每个可审批完整计划都包含且只包含一个规范 `cdf-scope/v1` 区块，包括为 **Save as Task** 提升的 Level S 计划，并按以下顺序具备八个字段：
+M／L／XL 在审批前准备一个内部规范 `cdf-scope/v1` 区块。每个已保存计划均包含一个该区块，包括由已批准快速计划机械映射的 S 级任务。以下八个字段用于内部约束和 task 文件，不要求在聊天审批时展示：
 
 - `in_scope`
 - `out_of_scope`
@@ -117,20 +128,20 @@ Handoff 或已保存任务会直接携带这些标题，不得重命名、合并
 - `will_not_change`
 - `acceptance_criteria`
 
-所有字段都必须存在，且顺序固定，因为完整性验证以第一个和最后一个字段界定 payload 边界。批准前，`in_scope` 和 `acceptance_criteria` 必须各有至少一个非空条目；其它数组确实没有内容时可以为空。部分或条件批准若没有任何获批 `in_scope` 条目，必须返回 `BLOCKED`。批准后，规范区块成为不可变数据。执行和任务编译都不得改写、重排、扩大、弱化、格式归一化、重新缩进或静默增加范围。
+所有字段必须存在且顺序固定，`in_scope` 和 `acceptance_criteria` 各至少有一个非空条目，其它数组可为空。部分或条件批准没有任何已批准项时必须 `BLOCKED`。批准后，或完成已批准 S 级任务的机械映射后，区块不可变；执行和编译不得改写或增加范围。每项重要义务都必须在审批摘要中展示，内部内容本身不构成授权。
 
 唯一的 `cdf-scope/v1` 区块是范围的唯一规范授权源，其中的 `acceptance_criteria` 字段是验收标准的唯一规范源。Development Plan 的 `Acceptance Criteria` 只是可读投影：必须逐项、同序、逐字重复全部规范标准，不得增加、删除、弱化、扩大、重新解释、合并或拆分。Task-level 标准只能逐字引用适用的规范条目。任何新增或改变的标准都是范围变更，必须重新规划并审批。
 
 ### 人工审批
 
-所有风险等级都需要批准。有效批准必须同时明确获批的计划、Scope Lock、阶段或子集，以及一个授权动作：
+所有风险等级都需要批准。有效批准必须明确已展示的精简计划（用户要求时为完整计划）、阶段或子集，以及一个授权动作：
 
 1. **Execute Now**
 2. **Save as Task**
 
-当范围或动作仍有歧义时，`ok`、`continue`、`可以` 或 `looks good` 不构成有效授权。CDF 支持完整、带条件和部分批准；条件必须先写入修订后的 Scope Lock。
+当范围或动作仍有歧义时，`ok`、`continue`、`可以` 或 `looks good` 不构成有效授权。CDF 支持完整、带条件和部分批准；条件先写入工作中的 Scope Lock，并通过修订后的精简摘要展示给用户，再取得批准。
 
-部分批准时，计划中唯一的规范 Scope Lock 必须修订为仅包含可安全分离的获批子集；未批准项保持逐字不变，并通过规范排除项加以保护。CDF 还会生成稳定的 `Partial Approval Result`，只包含批准类型、逐字的已批准项、逐字的未批准项和规范版本标记。该结果只是审计投影：它不复制完整 Scope Lock，也不产生第二个授权源。
+部分批准时，规范范围只包含可安全分离的已批准子集，并保护未批准项。聊天中简要说明这个边界；结构化 `Partial Approval Result` 保留在内部并写入 task 文件，只作为审计证据，不产生第二个 Scope Lock。审批及阶段记录也遵循相同展示规则：聊天简述含义，完整记录写入文件，用户要求时再展开。
 
 Approval Record 记录已批准边界和所选动作。对于 **Save as Task**，该记录只授权持久化，明确不授权批准回合或未来恢复时修改代码。保存后，其内容始终保持不变。
 
@@ -176,6 +187,7 @@ Approval-State: approved
 
 - 原样保留规范 Scope Lock 和 Approval Record；
 - 对照 `cdf-scope/v1.acceptance_criteria` 验证 `Acceptance Criteria` 投影；
+- 要求每条规范验收标准至少映射到一个任务，并有对应的计划检查；
 - 在不增加产品或技术决策的前提下生成稳定、依赖感知的任务；
 - 保留部分批准的审计投影，但不复制 Scope Lock；
 - 执行 Scope Guard；
@@ -184,7 +196,7 @@ Approval-State: approved
 
 如果任务编译需要新范围、接口、依赖、架构决策、改变验收标准、不充分的 Scope Lock，或无法安全分离部分批准的剩余内容，它必须 `BLOCKED` 并返回 CDF 规划，重新获得批准。
 
-已批准的 Level S 快速路径没有规范 Scope Lock，因此不能直接 handoff。CDF 必须先把它提升为完整 Development Plan 并获得该计划的批准；风险等级仍保持 `Level S`。
+已批准的 Level S 快速路径不能直接 handoff。CDF 先将其映射为完整文档格式，并用原批准语句补全 Approval Record，风险仍为 `Level S`。除非发现新增含义，这种机械展开不要求再次审批。
 
 当用户要的是任务拆分时，**Save as Task** 生成可持久化任务定义；**Execute Now** 表示实施底层已批准开发工作，不会返回未保存的任务列表。
 
@@ -210,15 +222,18 @@ $cdf continue task <path>
 
 1. 验证 `task_contract: cdf-cdtask/v1` 和全部必需区块；
 2. 按固定边界提取规范 Scope Lock 和 Approval Record，并要求重新计算的摘要与持久化基线一致；
-3. 执行**代码证据 Diff**：将当前 branch、commit 以及任务 write scopes 和 protected areas 涉及文件的内容，与任务文件中保存的 `Source-Branch`、`Source-Commit` 和 `Source-Worktree-Changes` 进行比对。
+3. 在选择恢复路径前，只读校验已有进度 sidecar；
+4. 执行**代码证据 Diff**，覆盖 write scopes、protected areas，以及 API、配置、schema、调用方等只读证据依赖。将已提交和未提交内容与来源版本、Evidence Summary 中的内容基线比对；Git status 条目一致不能证明内容未变；
+5. 结合经过校验的进度核对实际改动，区分原有工作、可归因的已批准执行产出、无实质影响的外部漂移，以及实质或无法解释的变化；
+6. 重新验证假设、停止条件、共享契约、验收、验证、回滚和阶段边界。
 
 缺失、旧版或无法识别的 contract 会在不修改代码的情况下被拒绝。
 
-**Fast-Resume Path** — 如果自 `Source-Commit` 以来没有任何提交触及任务 write scopes 或 protected areas 的文件，且 worktree 在这些路径上也没有相关未提交改动，直接进入以下 Resume Authorization Record。
+**Fast-Resume Path** — 全部检查通过后，已保存计划必须仍有效，且证据未变，或每项差异均可解释为已批准执行产出或无实质影响的漂移。中断任务的正常产出本身不触发重新审批。基线缺失、sidecar 绑定无效或归因未明确不能视为无变化，必须遵循 CDF 的证据缺口及核对规则。
 
-**Full-Replan Path** — 如果有提交或未提交的改动触及了任务 write scopes 或 protected areas 的文件，返回 CDF 规划。以保存任务中的 `Requirement Understanding`、`Evidence Summary`、`Risk Gate Result`、`Scope Lock`、`Technical Approach` 和 `Implementation Plan` 作为起点，只重新检查变动的文件，更新 Evidence Summary，重新评估风险，必要时修订 Development Plan 和 Scope Lock，获得新审批后再执行。
+**Full-Replan Path** — 实质漂移必须返回规划，重新检查变化来源及受影响的依赖或假设，必要时修订计划和 Scope Lock，并获得针对新计划及动作的批准。即使 Scope Lock 文本未变，也结束旧任务的恢复路径。**Execute Now** 按 7A 使用新计划和 Approval Record；**Save as Task** 按 7B 保存到不同的新路径并停止，等待用户后续明确继续新任务。两种情况均保留旧任务及 sidecar 绑定，不将新计划的执行写入旧 sidecar，也不把旧运行状态复制到新 sidecar。
 
-Fast-Resume Path 通过后，或 Full-Replan Path 重新获得审批后，显式 `$cdf continue task <path>` 请求会创建如下本回合 `Resume Authorization Record`：
+只有 Fast-Resume Path 通过后，显式 `$cdf continue task <path>` 请求才会为未变的已保存定义创建如下本回合 `Resume Authorization Record`：
 
 ```markdown
 ## Resume Authorization Record
@@ -231,6 +246,8 @@ Fast-Resume Path 通过后，或 Full-Replan Path 重新获得审批后，显式
 ```
 
 只有此后，CDF 才能按依赖顺序执行已保存的批准范围。首次修改代码前，CDF 会按 `cdf-execution-progress/v1` 创建或验证 `<saved-task-path>.progress.yaml`。Sidecar 只记录 `pending`、`in_progress`、`verified` 或 `blocked`；恢复时只跳过证据仍适用的 `verified` 任务，并在继续前检查中断任务。该记录和 sidecar 都不修改已保存任务或其 Approval Record。仅检查、审阅、总结或验证任务既不创建 Resume Authorization Record，也不授权实施或修改进度。
+
+结项必须同时满足：全部任务 verified、每条规范验收标准都有任务覆盖及当前有效的成功验证证据、最终范围内审查没有未解决问题。不能仅凭全部任务 verified 就记录 completed。
 
 ## 边界
 

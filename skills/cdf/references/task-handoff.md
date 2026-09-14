@@ -18,7 +18,7 @@ CDF may create the handoff only after all of the following are true:
 
 Raw requirements, PRDs, unapproved plans, ambiguous acknowledgements, and manual task requests are not valid inputs. Route them through the normal CDF requirement, evidence, planning, and approval stages first.
 
-A Level S Fast Path Plan is also not a valid input: it has no canonical Scope Lock. When a fast-path change is to be saved as a task, CDF must first expand it into a full Development Plan with a canonical `cdf-scope/v1` block and obtain approval of that expanded plan. The risk level stays `Level S`.
+A Level S Fast Path Plan alone is not a valid compiler input because it has no canonical Scope Lock. After the user approves the fast path and **Save as Task**, CDF mechanically maps its approved content into the full document plan, canonical `cdf-scope/v1` block, and full Approval Record before handoff. Risk stays `Level S`. Formatting alone requires no second approval; newly discovered decisions or obligations require an updated concise summary and renewed approval.
 
 ## Handoff header
 
@@ -71,6 +71,8 @@ Carry the approved Development Plan directly, with these exact headings in this 
 
 Do not rename, combine, split, or regenerate these sections. Also carry the Approval Record verbatim, the Partial Approval Result when applicable, and the Approved Phase Boundary when approval covers one phase. A Level S or M Rollback Plan may contain a concise reversible action or `None` only when rollback is genuinely not applicable.
 
+This full format is assembled and frozen by CDF from the approved planning material before handoff; it need not have been printed in chat. For summary-based approval, also carry a separate `## Approval Summary` containing the exact displayed summary and action question as fenced text. The summary is historical approval evidence, not another canonical plan. If the user explicitly approved the displayed full plan, preserve that plan as the approval basis and omit the summary rather than duplicating the canonical Scope Lock. Check that the internal full plan and Scope Lock do not introduce meaning the user did not approve. Never regenerate the summary from the full plan or send the eleven sections to the user merely to obtain approval of formatting.
+
 The canonical Scope Lock uses this schema:
 
 ```yaml
@@ -104,12 +106,15 @@ Before compilation, verify:
 - the contract version, handoff type, and approval state are exact;
 - the risk level is supported and matches the approved plan;
 - the Approval Record identifies the approver statement, approved boundary, timestamp or session context, approval type, and **Save as Task** action;
+- the exact displayed approval basis (Approval Summary or explicitly approved full plan) is preserved, and the full plan and Scope Lock faithfully represent its approved meaning without hidden obligations;
 - the canonical Scope Lock has all eight fields, non-empty `in_scope` and `acceptance_criteria`, and is internally consistent;
 - the Development Plan has the exact required headings and carries the approved sections directly;
 - the plan's Acceptance Criteria projection exactly matches canonical `acceptance_criteria` item for item, in order and wording;
 - plan steps and all task-level acceptance references fit inside the Scope Lock;
+- the approved Verification Strategy supports checking every canonical acceptance entry; after decomposition, require task mappings and planned checks to cover the complete canonical array;
 - any partial approval contains only the approved subset and keeps the remainder excluded;
 - the handoff contains enough repository traceability to perform a later drift check;
+- the Evidence Summary preserves the plan's read-only evidence dependencies and their source baselines, including relevant content outside task write scopes and protected areas;
 - the current worktree state and relevant changes list are valid and the save drift preflight is recorded;
 - rollback and phase boundaries are present when applicable.
 
