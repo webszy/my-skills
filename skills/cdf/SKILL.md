@@ -26,6 +26,25 @@ Planning is an internal stage of CDF, not a separate handoff. Saving a task uses
 
 CDF Suite maturity is **v0.1**. This is distinct from the package version recorded in `skill.json`.
 
+## Output First Line
+
+While the CDF workflow is active, begin every user-facing response, including progress updates, clarification or approval requests, blocked results, save confirmations, resume confirmations, and final reports, with this plain-text line:
+
+```text
+当前流程：cdf v<version>
+```
+
+Read `version` from [skill.json](skill.json) in the same skill directory before the first CDF response. For package version `1.2.1`, the line is `当前流程：cdf v1.2.1`. Use the package version, not Suite maturity or a contract version; do not hardcode the example as the version source. If the metadata cannot be read, use `当前流程：cdf 版本未知` and briefly disclose the missing version instead of guessing. Put the line before any heading or other content, then a blank line. It is a display prefix, not an additional planning section: all response templates below inherit it. Do not inject it into canonical payloads, task-file frontmatter, or progress files; an exact preserved Approval Summary retains it if it was displayed. Merely discussing CDF without entering its workflow does not require this prefix.
+
+## Agent Activity Disclosure
+
+Every user-facing CDF response must also briefly state these two items in the user's language, after its main content and before any approval/action question:
+
+- **当前 Agent 已做 / Current Agent Actions:** work actually performed, including inspections, edits, validation attempts and their results, and any additional work beyond the current request. Distinguish performed actions from planned or unexecuted work. Progress updates cover actions since the previous update; final, blocked, save, and handoff reports cover the current request cumulatively and identify any extra work and why it was done.
+- **与当前需求无关的代码改动 / Code Changes Unrelated to This Request:** list every unrelated code/configuration/documentation edit attributable to the current Agent during this request, with file paths, what changed, why, authorization evidence if any, and whether it remains or was reverted. Explicitly write `无` / `None` when evidence establishes there were none, or `无法确认` / `Unknown` with the evidence gap when attribution cannot be established. Preserved pre-existing or other Agents' edits are not this Agent's work; identify them separately when relevant.
+
+Base these disclosures on observed actions and the inspected execution baseline, tool receipts, and diff/content evidence. A clean final diff does not erase an unrelated edit that was reverted. Disclosure never authorizes unrelated work or relaxes the existing scope/approval rules. Keep the two items concise; they do not add canonical planning sections or modify immutable saved-task payloads. Completion reports reuse `completion_gate.evidence` for actual Agent activity and `out_of_scope_changes` for unrelated edits as specified in [Completion Evidence Gate](references/completion-evidence-gate.md).
+
 ## Ownership and Boundaries
 
 CDF owns:
@@ -353,7 +372,8 @@ After valid approval explicitly authorizes `Execute Now`:
 2. re-check assumptions, stop conditions, protected areas, and the approved phase boundary;
 3. implement only the canonical approved scope;
 4. run only the verification appropriate to the approved change;
-5. report changed files, observable results, checks actually run, failures, and any unverified criteria.
+5. apply the [Completion Evidence Gate](references/completion-evidence-gate.md) and emit its structured report for every completion request;
+6. only after `PASS`, perform the final scoped review and satisfy all applicable Review and Human Approval requirements before CDF declares completion. Report changed files, observable results, checks actually run, failures, and any unverified criteria even when completion is blocked.
 
 Do not perform unrelated refactors, cleanup, dependency additions, broad reformatting, public-interface changes, or protected-area edits. Remove only artifacts made obsolete by the approved change itself.
 
@@ -362,6 +382,12 @@ For an approved fast path, the approved scope is the `Change` line, the protecte
 Stop immediately and return to planning when new evidence changes scope, risk, implementation meaning, acceptance criteria, rollback, or a material assumption. Update the Development Plan and Scope Lock and request renewed approval before continuing.
 
 Never describe a planned check as completed. A failed check may be repaired only inside approved scope; otherwise stop and replan.
+
+### Completion Evidence Gate
+
+**Agent can propose completion, but only CDF can declare DONE.** Read [references/completion-evidence-gate.md](references/completion-evidence-gate.md) before evaluating any execution completion request, including a resumed saved task. An Agent's `Done`, `Completed`, report status, or task-state label is a proposal, never transition authority.
+
+The gate sits after verification and before final review in the existing completion path (`VERIFYING → REVIEWING → DONE` conceptually). These are phase labels, not new lifecycle states: saved execution keeps its existing task states and `overall_state: completed`. CDF checks actual acceptance, validation, diff, scope, and issue evidence and outputs `PASS`, `FAIL`, or `INSUFFICIENT_EVIDENCE`. Only `PASS` admits final review; it never completes work automatically or waives existing approval. A finding that invalidates acceptance/evidence or a subsequent relevant change requires reevaluation before completion. Reuse existing in-scope repair, replanning, or `BLOCKED` handling when the gate does not pass.
 
 ### 7B. Save as Task
 
@@ -460,6 +486,7 @@ Capture `Workspace`, `Source-Branch`, `Source-Commit`, `Source-Worktree-State`, 
 - [Boundary Cases](references/boundary-cases.md) — read when a request, approval, evidence conflict, or partial scope is near a control boundary.
 - [Task Handoff](references/task-handoff.md) — read only for `Save as Task` or saved-task resume.
 - [Execution Progress](references/execution-progress.md) — read only before executing or resuming a saved task.
+- [Completion Evidence Gate](references/completion-evidence-gate.md) — read before any execution completion decision; includes the report contract and behavioral test cases.
 - [Internal Task Compiler](components/cdtask/COMPONENT.md) — enter only after approved `Save as Task`.
 
 ## Non-Negotiable Rules
@@ -474,5 +501,6 @@ Capture `Workspace`, `Source-Branch`, `Source-Commit`, `Source-Worktree-State`, 
 - Never let the internal task compiler make product, architecture, risk, scope, or approval decisions.
 - Never continue after material drift or new evidence invalidates the approved plan.
 - Never claim verification that was not actually performed.
+- Never declare execution complete or record `overall_state: completed` without a current Completion Evidence Gate `PASS`, a successful final scoped review, and all applicable approvals.
 - Never record a digest that was not actually computed by running a hashing command.
 - Keep approval display proportional: Level S uses four lines; M/L/XL use a concise four-section summary. Complete the underlying analysis, but reserve the eleven-section format for the handoff and saved task unless the user requests full details.

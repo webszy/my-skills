@@ -77,7 +77,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 ### Version Semantics
 
 - **CDF Suite maturity:** v0.1
-- **Skill package version:** 1.2.0
+- **Skill package version:** 1.2.1
 
 These are separate version systems. Suite maturity describes the CDF architecture; package version describes the distributable release.
 

@@ -149,7 +149,7 @@ Include these constraints in the saved document. They constrain a future CDF res
 - After explicit current authorization, record runtime state only in the separate `cdf-execution-progress/v1` sidecar; never write it into this task.
 - Skip only sidecar tasks whose `verified` evidence remains applicable. Inspect `in_progress` or `blocked` work before continuing it.
 - Report only checks actually performed. An inspect, review, summarize, or validate request authorizes no code change or progress mutation.
-- Before recording completion, verify every canonical acceptance entry against current successful evidence, including entries beyond any single task's mappings; all tasks being verified is not sufficient by itself.
+- Before recording completion, apply CDF's Completion Evidence Gate to every canonical acceptance entry, including entries beyond any single task's mappings, and produce its structured report. Only a current PASS followed by successful final scoped review and all applicable approvals permits completion; all tasks being verified is not sufficient by itself.
 ```
 
 After successful validation of an explicit continue request, CDF uses the runtime-only authorization format defined in [Resume a Saved Task](../../../SKILL.md#resume-a-saved-task), then follows [Execution Progress](../../../references/execution-progress.md). Neither action modifies the saved task or its Approval Record.

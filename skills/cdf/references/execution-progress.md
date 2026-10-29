@@ -38,6 +38,8 @@ tasks:
 
 The task list must contain every saved task ID exactly once and no unknown ID. Keep saved dependency order, but do not copy task definitions or canonical payloads into the sidecar.
 
+For each authorized overall completion request, also record the structured `completion_gate` report defined in [Completion Evidence Gate](completion-evidence-gate.md) as an additive top-level field. Gate decisions are evidence, not lifecycle states. Existing `cdf-execution-progress/v1` sidecars without this field remain readable; do not rewrite immutable saved tasks or their approval payloads. Before newly declaring or reaffirming completion, evaluate the gate from current evidence even if an older sidecar already says `completed`. A legacy label alone cannot establish completion; an inspect-only request may report missing evidence but must not mutate progress.
+
 Compute `task_document_sha256` over the complete immutable saved task bytes before creating the sidecar. On every resume, recompute it and require an exact match. Also require the sidecar payload digests to equal the validated digest fields in the saved task. A mismatch is `BLOCKED`; never rewrite either artifact to force a match.
 
 ## State Transitions
@@ -54,7 +56,7 @@ blocked -> in_progress
 - Write `verified` only after every mapped canonical acceptance criterion is satisfied and the applicable planned checks were actually run successfully. Record concise observable evidence; never record a planned check as performed.
 - Write `blocked` with the concrete reason when work cannot continue inside approved scope.
 - Never move `verified` backward merely to rerun work. New evidence that invalidates a verified result follows CDF drift and replanning rules.
-- Set `overall_state: completed` and `completed_at` only when every task is `verified`, every canonical acceptance entry has task coverage and current successful verification evidence, and the final scoped review has no unresolved in-scope finding. Check the complete canonical array item by item; all tasks being `verified` cannot substitute for this check. Store the criterion-to-check evidence in the applicable tasks' `verification_evidence`. Any uncovered, failed, or unverified entry prevents completion.
+- Set `overall_state: completed` and `completed_at` only when every task is `verified`, every canonical acceptance entry has task coverage and current successful verification evidence, the current `completion_gate.status` is `PASS`, and the subsequent final scoped review has no unresolved in-scope finding and all applicable approvals are satisfied. Apply the [Completion Evidence Gate](completion-evidence-gate.md) to the complete canonical array item by item; all tasks being `verified` cannot substitute for this check. Store the criterion-to-check evidence in the applicable tasks' `verification_evidence` and reference it from the report. Any uncovered, failed, or unverified required entry prevents completion. A non-passing gate uses the existing repair/replan or `blocked` handling; do not write `completed_at` for that attempt. Review changes invalidate affected evidence and require gate reevaluation and review before completion.
 - Update the sidecar atomically so interruption cannot leave a partially written progress record.
 
 ## Resume and Reconciliation

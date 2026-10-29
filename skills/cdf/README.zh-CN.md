@@ -4,6 +4,10 @@ CDF 是唯一面向用户的受控开发 Skill。它理解开发需求、检查�
 
 > Small changes should be fast. Risky changes should be controlled.
 
+CDF 流程运行时，每次对外回复的第一行显示 `当前流程：cdf v<version>`，版本读取该 skill 的 `skill.json`（当前为 `1.2.1`）。进度、审批、保存和恢复消息均适用；这行提示不增加 task 文件的固定章节。
+
+每次回复还会简要列出 **当前 Agent 已做** 和 **与当前需求无关的代码改动**：说明实际工作、额外动作及原因，以及无关改动的文件、授权证据和保留或撤回状态；确认没有时明确写“无”，归属不明时写“无法确认”并说明证据缺口。最终报告累计覆盖当前需求，并区分已有或其他 Agent 的修改。完成报告复用动作证据和 `out_of_scope_changes`；披露不代表获得额外范围授权。
+
 ## 何时使用 CDF
 
 通过 `$cdf`、`/cdf`、`cdf:`、`controlled-development-flow`，或明确要求受控开发流程来调用 CDF。
@@ -249,6 +253,8 @@ $cdf continue task <path>
 
 结项必须同时满足：全部任务 verified、每条规范验收标准都有任务覆盖及当前有效的成功验证证据、最终范围内审查没有未解决问题。不能仅凭全部任务 verified 就记录 completed。
 
+[Completion Evidence Gate](references/completion-evidence-gate.md) 对 Execute Now 和保存任务的完成申请统一检查验收条件、实际验证结果、Diff Review、范围合规及已知或未验证问题，每次生成结构化 `completion_gate` 报告。`FAIL` 和 `INSUFFICIENT_EVIDENCE` 阻止结项；`PASS` 仅允许进入现有最终 Review，不豁免任何 Human Approval 要求。Agent 输出 `Done` 不会改变任务状态。现有任务契约和生命周期状态保持不变；旧进度 sidecar 仍可读取，但结项必须有当前有效的门禁证据。
+
 ## 边界
 
 CDF 不会：
@@ -297,6 +303,7 @@ $cdf validate task <path> without executing it
 - [Boundary Cases](references/boundary-cases.md)
 - [Internal Task Handoff](references/task-handoff.md)
 - [Saved-Task Execution Progress](references/execution-progress.md)
+- [Completion Evidence Gate](references/completion-evidence-gate.md)
 - [Internal Task Compiler](components/cdtask/COMPONENT.md)
 
 ## 安装
@@ -322,7 +329,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 ## 版本语义
 
 - **CDF Suite maturity：** v0.1
-- **Skill package version：** 1.2.0
+- **Skill package version：** 1.2.1
 
 两者是不同的版本体系。Suite maturity 表示 CDF 架构，package version 表示可分发版本。
 

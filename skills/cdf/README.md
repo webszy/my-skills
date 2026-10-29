@@ -4,6 +4,10 @@ CDF is the single user-facing controlled-development Skill. It understands a dev
 
 > Small changes should be fast. Risky changes should be controlled.
 
+While CDF is active, every user-facing response starts with `当前流程：cdf v<version>`, using the package version from the skill's `skill.json` (currently `1.2.1`). This also applies to progress, approval, save, and resume messages; it does not add a section to the saved task format.
+
+Each response also briefly states **Current Agent Actions** and **Code Changes Unrelated to This Request**. Report actual work, extra actions and their reasons, and unrelated edits with files, authorization evidence, and retained/reverted status; explicitly state `None` when established or `Unknown` when attribution is unresolved. Final reports cover the request cumulatively and distinguish pre-existing or other Agents' changes. Completion reports reuse activity evidence and `out_of_scope_changes`; disclosure never authorizes extra scope.
+
 ## When to Use CDF
 
 Invoke CDF explicitly with `$cdf`, `/cdf`, `cdf:`, `controlled-development-flow`, or an explicit request for a controlled development flow.
@@ -249,6 +253,8 @@ Only then may CDF execute the saved approved scope in dependency order. Before t
 
 Completion requires every task to be verified, every canonical acceptance entry to have coverage and current successful verification evidence, and the final scoped review to have no unresolved in-scope finding. All tasks being verified is not sufficient on its own.
 
+CDF's [Completion Evidence Gate](references/completion-evidence-gate.md) checks acceptance, actual validation results, diff review, scope compliance, and known or unverified issues for both Execute Now and saved-task completion. Every request produces a structured `completion_gate` report. `FAIL` and `INSUFFICIENT_EVIDENCE` block completion; `PASS` permits the existing final review and does not waive any Human Approval requirement. Agent claims such as `Done` never change task state. Existing task contracts and lifecycle states remain unchanged; older progress sidecars remain readable, but completion must be supported by current gate evidence.
+
 ## Boundaries
 
 CDF does not:
@@ -298,6 +304,7 @@ $cdf validate task <path> without executing it
 - [Boundary Cases](references/boundary-cases.md)
 - [Internal Task Handoff](references/task-handoff.md)
 - [Saved-Task Execution Progress](references/execution-progress.md)
+- [Completion Evidence Gate](references/completion-evidence-gate.md)
 - [Internal Task Compiler](components/cdtask/COMPONENT.md)
 
 ## Installation
@@ -323,7 +330,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 ## Version Semantics
 
 - **CDF Suite maturity:** v0.1
-- **Skill package version:** 1.2.0
+- **Skill package version:** 1.2.1
 
 These are separate version systems. Suite maturity describes the CDF architecture; package version describes the distributable release.
 

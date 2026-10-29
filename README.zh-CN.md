@@ -77,7 +77,7 @@ npx skills add https://github.com/webszy/my-skills --skill cdf -a codex -a claud
 ### 版本语义
 
 - **CDF Suite maturity：** v0.1
-- **Skill package version：** 1.2.0
+- **Skill package version：** 1.2.1
 
 两者是不同的版本体系。Suite maturity 表示 CDF 架构成熟度，package version 表示可分发版本。
 
