@@ -36,7 +36,7 @@ An unresolved in-scope review finding blocks completion. Reevaluate the gate aga
 
 ## Completion Report
 
-Emit this YAML report on every completion request. All eight fields are required; empty arrays are allowed only when the inspected evidence establishes no applicable entries. The default below represents no evaluated evidence, not a passing report:
+Retain this structured report for every completion request. For Execute Now its original eight fields remain required; v2 saved progress also requires `source_snapshot` (computed SHA-256) and `evaluated_at` (timezone-bearing timestamp). Empty arrays are allowed only when the inspected evidence establishes no applicable entries. The default below represents no evaluated evidence, not a passing report:
 
 ```yaml
 completion_gate:
@@ -48,6 +48,8 @@ completion_gate:
   known_issues: []
   unverified_items: []
   evidence: []
+  source_snapshot: <computed SHA-256, required in v2 progress>
+  evaluated_at: <ISO-8601, required in v2 progress>
 ```
 
 Populate the arrays using these item shapes (result values are check results, not task states):
@@ -60,11 +62,15 @@ Populate the arrays using these item shapes (result values are check results, no
 | `out_of_scope_changes` | `path`, `change` (current-Agent attribution, whether retained or reverted, and authorization evidence if any), `reason`, `evidence` (IDs); disclosure never grants authorization |
 | `known_issues` | `issue`, `impact`, `evidence` (IDs when available) |
 | `unverified_items` | `item`, `reason`, `impact`, `evidence` (IDs when available) |
-| `evidence` | unique `id`, `kind`, retrievable `source` (tool receipt, log/artifact path, or file and lines), observed `result`, and `snapshot` identifying the content checked |
+| `evidence` | unique `id`, `kind`, retrievable `source` (tool receipt, log/artifact path, or file and lines), observed `result`, and `snapshot` identifying the content checked; v2 progress uses SHA-256 and adds `check_id` (approved check ID or null) and boolean `valid` |
 
 Resolve every evidence ID to its actual source and verify it supports the cited conclusion. Include `kind: agent_activity`, `kind: diff_review`, and `kind: scope_compliance` records with observed outcomes even when `changed_files` or `out_of_scope_changes` is empty. A failed exit code contradicts a claimed validation `PASS`; do not trust the label. A zero exit code alone also cannot establish acceptance without the relevant check result.
 
-For Execute Now, include the report inline or link to its retrievable artifact in the completion response; no new persisted artifact is required. For an authorized saved-task execution, also store the current report in the existing progress sidecar as described in [Execution Progress](execution-progress.md). Do not insert it into the immutable task, canonical Scope Lock, or Approval Record. Older task definitions and sidecars remain readable without migrations; their labels do not exempt a new completion decision from this gate. Read-only inspection can evaluate and emit a report but cannot change task state or write progress.
+For Execute Now, include the report inline or link to its retrievable artifact. Level S may retain the full report/evidence in execution context and show only `Changed`, `Verified`, `Scope`, `Remaining Issues` plus activity disclosure; expand failures, risks, unauthorized changes and evidence gaps. The gate itself is never abbreviated; no new persisted artifact is required. For an authorized saved-task execution, also store the current report in the existing progress sidecar as described in [Execution Progress](execution-progress.md). Do not insert it into the immutable task, canonical Scope Lock, or Approval Record. Older definitions/sidecars remain read-only historical evidence under [Resume compatibility](resume.md#legacy-and-version-policy); v1 cannot execute or acquire v2 completion semantics without the explicit re-approval route. Read-only inspection can evaluate and emit a report but cannot change task state or write progress.
+
+Task-local checks and contribution mappings cannot establish product acceptance. The report must walk the full canonical array and cite each planned product verification path. Runtime stores final review separately with result, actual evidence, source snapshot, review time, outstanding findings and applicable approval evidence under [Execution Progress](execution-progress.md#completion-and-final-review). Missing final review prevents completed even with gate PASS; relevant edits or new invalidating evidence require refreshed verification and review.
+
+For v2 saved progress, evidence objects follow the runtime registry shape. `validation_results` includes each approved check ID plus the tests/lint/typecheck/build accounting categories. Every approved check is required; product AC references must include its planned product check IDs. The standard-library validator checks this structure, reference resolution, snapshots and contradictory status/exit codes. It cannot prove logs are truthful or findings are irrelevant; always inspect actual sources and derive the semantic verdict. A machine `VALID` is never a Completion Gate PASS.
 
 The report is an evidence and decision record. It does not replace the existing final review outcome, grant execution authority, or approve changes. Report an incomplete result honestly when required checks cannot be performed, together with the remaining checks needed for reassessment.
 

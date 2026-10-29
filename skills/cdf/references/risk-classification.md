@@ -21,7 +21,7 @@ Record `CLEAR`, `HIT`, or `UNKNOWN` with evidence for every row:
 
 | ID | Signal |
 |---|---|
-| ESC-01 | Shared components, primitives, tokens, styles, or global state |
+| ESC-01 | Changes to shared definitions, public interfaces, primitives, global tokens/styles/state, or other consumers; mere bounded local usage is not a HIT |
 | ESC-02 | Conditional rendering, feature gates, entitlements, permissions, or user-specific behavior |
 | ESC-03 | Persistent data writes/deletes, schema, migration, backfill, or user data |
 | ESC-04 | Billing, payments, subscriptions, pricing, authentication, or authorization |
@@ -40,7 +40,7 @@ Signals are evidence and may impose a floor; use the highest level supported by 
 
 | Signal | Bounded case | Higher-risk case |
 |---|---|---|
-| ESC-01 shared surface | Level M may be valid when usage and regression scope are small, known, and reversible | Level L for broad/global behavior or many materially affected flows |
+| ESC-01 shared surface | Shared definition/interface changes require at least M, with bounded known consumers and regression checks. Existing static parameter usage with no shared effect may be S after every S row passes | Level L for broad/global behavior or many materially affected flows |
 | ESC-02 conditional behavior | Level M for bounded local state rendering with no entitlement or access meaning | Level L for permission, entitlement, feature-release, or user-specific contract impact |
 | ESC-03 persistent data | Normally at least Level L | Level XL for schema migration, backfill, major lifecycle redesign, or hard-to-reverse state |
 | ESC-04 money or access | Normally at least Level L | Level XL for subsystem redesign, migration, or coordinated multi-system change |

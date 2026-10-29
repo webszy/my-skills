@@ -133,7 +133,7 @@ Classify risk from the combined evidence:
 - **Sensitivity:** does it touch money, data, identity, security, privacy, or material reporting?
 - **Coordination:** does safe delivery require migration, rollout, or multiple owners/systems?
 
-A bounded shared component use, a small configuration change, or an analytics event may remain Level M when evidence shows limited impact and straightforward rollback. Cross-cutting behavior, persistent data, sensitive logic, material external contracts, or non-trivial rollback generally supports Level L. Architecture, new subsystems, migrations, major data-flow redesign, phased rollout, or multi-system coordination generally supports Level XL.
+A bounded static shared-component parameter use may be Level S after every S Reverse Check passes. A shared definition change, small configuration change, or analytics event may remain Level M when evidence shows limited impact and straightforward rollback. Cross-cutting behavior, persistent data, sensitive logic, material external contracts, or non-trivial rollback generally supports Level L. Architecture, new subsystems, migrations, major data-flow redesign, phased rollout, or multi-system coordination generally supports Level XL.
 
 See [Boundary Cases](boundary-cases.md) for examples near these control boundaries.
 
@@ -153,7 +153,7 @@ Use the gate even for a small request when its meaning is unclear. Do not use de
 - **Decision:** return the decision or recommendation. Treat implementation of the selected option as a development request.
 - **Research:** return the requested synthesis. Treat any resulting build request as a new development request.
 
-A request to “turn this PRD into tasks” is still a delivery request. It must pass repository inspection, planning, canonical Scope Lock, and approval before CDF may enter its internal task-compiler component. See [Task Handoff](task-handoff.md).
+An explicitly read-only, unsaved task draft is allowed through CDF’s draft route and creates no approval or execution authority. A request to persist “this PRD as tasks” is still a delivery request. It must pass repository inspection, planning, canonical Scope Lock, and approval before CDF may enter its internal task-compiler component. See [Task Handoff](task-handoff.md).
 
 ## Requirement outputs
 

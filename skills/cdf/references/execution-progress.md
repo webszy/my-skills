@@ -1,76 +1,84 @@
-# CDF Saved-Task Execution Progress
+# Saved-Task Execution Progress — v2
 
-Read this reference during saved-task validation to inspect any existing sidecar read-only and reconcile repository changes before choosing a resume route. Creating or updating progress still requires successful CDF resume validation and the current-turn Resume Authorization Record.
+Load while validating saved-task history read-only, and before any authorized runtime mutation. Definition/plan/scope/approval remain immutable. Progress is an execution journal, not a scheduler, authorization source or editable task definition.
 
-The saved task is immutable definition and approval evidence. Runtime progress lives in a separate mutable sidecar; it never changes scope, acceptance, risk, dependencies, write scope, approval, or execution authorization.
+## Ownership, serialization and binding
 
-## Ownership and Path
+CDF owns `<resolved-absolute-task-path>.progress.yaml`. Save never creates it. Create/update it only after [resume validation and current explicit authorization](resume.md). Use a JSON object (valid YAML 1.2) with LF and final LF, so the standard-library validator needs no general YAML dependency. Write atomically through a temporary sibling and rename; preserve prior snapshots for append-only comparison. Never discard old history to resolve a validation error.
 
-- CDF creates and updates progress; the internal CDTask compiler never creates it during **Save as Task**.
-- The deterministic path is `<absolute-saved-task-path>.progress.yaml`.
-- The sidecar grants no authority. It is usable only after the saved task passes the normal CDF resume validation and the current user explicitly authorizes continuation.
-- The saved task, canonical Scope Lock, Approval Record, and task definitions remain unchanged.
-- The expected task document and progress sidecar are control artifacts, not implementation drift. Validate them separately and exclude them from `Source-Worktree-Changes` unless either file is itself an approved implementation target.
+Required fields (`validate_cdf.py --describe` lists task/gate/review fields and transitions):
 
-## Contract
+| Field | Meaning |
+|---|---|
+| progress_contract | `cdf-execution-progress/v2` |
+| task_path, task_contract | Resolved absolute definition path, `cdf-cdtask/v2` |
+| task_document_sha256 | Actual hash of every final saved-file byte; never substitutes for save-time definition digest |
+| definition_sha256, scope_lock_sha256, approval_record_sha256 | Must match the normally validated saved task |
+| overall_state | `not_started`, `in_progress`, `blocked`, `completed` |
+| created_at, updated_at, completed_at | ISO-8601 with timezone; completed_at null until valid completion |
+| source_snapshot | Actual SHA-256 of a retained content manifest/snapshot covering relevant source/configuration/dependencies, including dirty/untracked content |
+| authorizations | Append-only runtime records from current explicit requests; never replay an old request as new authority |
+| events | Append-only ordered transition journal |
+| tasks | Projection of replayed events: every saved ID once, in definition order, with `id`, `state`, `verification_evidence` |
+| evidence | Observed evidence registry, retained after invalidation |
+| completion_gate, final_review | Current records or null |
+| completion_history | Earlier gate/review attempts with invalidation reason; never overwrite history |
 
-Create this document only after current-turn resume authorization:
+An authorization object has `id`, `user_request` (exact), `context` (timestamp/turn), `task_path`, `definition_sha256`, `action: "Execute Saved Approved Scope"`. Scope comes only from the saved canonical block. The validator checks binding/shape, not whether the human actually sent the statement. That must be checked against the conversation.
 
-```yaml
-progress_contract: cdf-execution-progress/v1
-task_path: <resolved absolute saved-task path>
-task_contract: cdf-cdtask/v1
-task_document_sha256: <64 lowercase hexadecimal characters>
-scope_lock_sha256: <digest copied from the validated task>
-approval_record_sha256: <digest copied from the validated task>
-overall_state: <not_started | in_progress | blocked | completed>
-created_at: <ISO-8601 timestamp>
-updated_at: <ISO-8601 timestamp>
-completed_at: <ISO-8601 timestamp | null>
-tasks:
-  - id: TASK-001
-    state: <pending | in_progress | verified | blocked>
-    started_at: <ISO-8601 timestamp | null>
-    verified_at: <ISO-8601 timestamp | null>
-    blocked_reason: <concise reason | null>
-    verification_evidence: []
-```
+Evidence objects have `id`, `kind`, retrievable `source`, observed `result`, `snapshot` (actual SHA-256), `check_id` (approved check ID or null for non-check evidence), and boolean `valid`. IDs are unique. Never change historical source/result/snapshot/check identity; invalidate by setting valid false and recording the reason in the reopen/history record. Revalidation creates new evidence IDs, never toggles old ones back to true. A source string or PASS label alone does not prove a real check occurred.
 
-The task list must contain every saved task ID exactly once and no unknown ID. Keep saved dependency order, but do not copy task definitions or canonical payloads into the sidecar.
-
-For each authorized overall completion request, also record the structured `completion_gate` report defined in [Completion Evidence Gate](completion-evidence-gate.md) as an additive top-level field. Gate decisions are evidence, not lifecycle states. Existing `cdf-execution-progress/v1` sidecars without this field remain readable; do not rewrite immutable saved tasks or their approval payloads. Before newly declaring or reaffirming completion, evaluate the gate from current evidence even if an older sidecar already says `completed`. A legacy label alone cannot establish completion; an inspect-only request may report missing evidence but must not mutate progress.
-
-Compute `task_document_sha256` over the complete immutable saved task bytes before creating the sidecar. On every resume, recompute it and require an exact match. Also require the sidecar payload digests to equal the validated digest fields in the saved task. A mismatch is `BLOCKED`; never rewrite either artifact to force a match.
-
-## State Transitions
-
-Use only these transitions:
+## Task transitions
 
 ```text
 pending -> in_progress -> verified
                        -> blocked
 blocked -> in_progress
+verified -> in_progress   (controlled reopen only)
 ```
 
-- Write `in_progress` atomically before the first implementation change for that task.
-- Write `verified` only after every mapped canonical acceptance criterion is satisfied and the applicable planned checks were actually run successfully. Record concise observable evidence; never record a planned check as performed.
-- Write `blocked` with the concrete reason when work cannot continue inside approved scope.
-- Never move `verified` backward merely to rerun work. New evidence that invalidates a verified result follows CDF drift and replanning rules.
-- Set `overall_state: completed` and `completed_at` only when every task is `verified`, every canonical acceptance entry has task coverage and current successful verification evidence, the current `completion_gate.status` is `PASS`, and the subsequent final scoped review has no unresolved in-scope finding and all applicable approvals are satisfied. Apply the [Completion Evidence Gate](completion-evidence-gate.md) to the complete canonical array item by item; all tasks being `verified` cannot substitute for this check. Store the criterion-to-check evidence in the applicable tasks' `verification_evidence` and reference it from the report. Any uncovered, failed, or unverified required entry prevents completion. A non-passing gate uses the existing repair/replan or `blocked` handling; do not write `completed_at` for that attempt. Review changes invalidate affected evidence and require gate reevaluation and review before completion.
-- Update the sidecar atomically so interruption cannot leave a partially written progress record.
+Journal every transition as an object with:
 
-## Resume and Reconciliation
+- `seq`: consecutive integer starting at 1;
+- `task_id`, `from`, `to`, timezone-bearing `at`, `authorization` (record ID);
+- `reason`: observed reason, not a generic state label;
+- `evidence`: observed check evidence IDs, nonempty for verified;
+- `affected_tasks`: all transitive dependent task IDs for reopen, otherwise empty;
+- `scope_evidence`: retrievable evidence IDs supporting in-scope/no-new-decision repair, required for reopen;
+- `new_decisions`: false; a new product/technical/architecture decision requires replanning, not an event.
 
-On every resume:
+Replay begins with all tasks pending. Before first code modification write in_progress, requiring every dependency verified. To mark verified, all of **this task's local task_verification checks** must have actually passed with applicable evidence. Full product AC satisfaction is not a prerequisite for local verified. A block records the concrete cause; recheck it before restarting. On interrupted execution inspect actual output, never blindly repeat effects.
 
-1. validate the saved task, then read any existing sidecar without mutation and validate its contract, paths, task IDs, hashes, timestamps, state values, and dependency consistency;
-2. reconcile actual committed and uncommitted changes against the saved plan, evidence dependencies, and recorded progress. Attribute normal approved output only when repository evidence supports it; a state label, timestamp, or overlapping path alone is insufficient. Inspect unexplained changes and stop as `BLOCKED` if attribution remains ambiguous. Attributable approved output is not automatically material drift;
-3. finish CDF's assumption and drift checks and select its resume route. Material drift uses the Full-Replan Path; preserve the old task and sidecar binding and never use them to track a newly approved plan;
-4. only after the Fast-Resume Path passes and its Resume Authorization Record exists, create or update progress and skip tasks marked `verified` whose evidence still applies to the current repository;
-5. inspect repository state before continuing an `in_progress` task, then finish or re-verify it without blindly repeating non-idempotent work;
-6. re-check a `blocked` task's reason before moving it to `in_progress`;
-7. execute a `pending` task only after all dependencies are `verified`.
+`tasks` is a checked projection, not a parallel mutable authority. The validator replays events, checks dependencies at each start, checks local evidence at verification and compares final projections. Without an earlier trusted snapshot, a self-contained journal cannot prove that history was never replaced; use `--previous-progress` when available and reconcile repository evidence regardless.
 
-If no sidecar exists, reconcile current repository evidence against every task Write Scope before initializing all tasks as `pending`. If overlapping changes make prior execution ambiguous, create no optimistic status and stop as `BLOCKED` for explicit reconciliation. Never infer completion from a changed file alone.
+## Controlled reopen and downstream invalidation
 
-An inspect, review, summarize, or validate request may read the sidecar but must not create or update it.
+Reopen verified only for an observed defect/new evidence invalidating previous verification, within original scope and without new decisions. Record reason and scope evidence, retaining every historical verification event and receipt.
+
+On the reopen event, invalidate the task's current evidence and the current verification evidence of **all transitive downstream tasks**. This conservative dependency rule avoids hidden consumers being skipped. Record every downstream ID, including pending tasks. Replaying the event moves already-started downstream tasks to blocked and clears their current verification references; pending descendants remain pending. This derived `verified/in_progress -> blocked` invalidation is not a free-standing user-selectable transition or permission to change scope.
+
+Set overall_state to in_progress or blocked and completed_at to null. Move any current gate/final review into completion_history with the defect/change reason, then clear them. Preserve their original contents. After repair, rerun applicable local checks; blocked descendants restart only when dependencies verify, then revalidate their applicable checks. Recheck product acceptance, the full gate and final review before completion. New evidence can invalidate results even before any source bytes change.
+
+If broader scope or a new decision is needed, stop and use Full Replan, preserving the old definition and history. A reopened task must never be used to launder new requirements through local checks.
+
+## Completion and final review
+
+All tasks verified is necessary, not sufficient. Evaluate every canonical product AC and approved check using [Completion Evidence Gate](completion-evidence-gate.md). Store the report with actual source_snapshot and evaluated_at. Gate PASS allows final review only.
+
+Record final_review with these exact fields:
+
+| Field | Requirement |
+|---|---|
+| result | PASS, FAIL or PENDING based on actual scoped review |
+| evidence | IDs in progress evidence referencing the actual review artifact/receipt, `kind: final_review` |
+| source_snapshot | Reviewed source/configuration/dependency content SHA-256 |
+| reviewed_at | Actual review time, after gate evaluation |
+| outstanding_findings | Unresolved in-scope findings; empty required for PASS |
+| required_approval | Whether the existing approved host workflow requires a final human approval; do not invent a new approval requirement |
+| approval_evidence | Actual applicable approval references; nonempty if required and PASS |
+
+Only all locally verified tasks, current product/gate PASS, a subsequent current final review PASS without outstanding findings, and all applicable approvals allow overall_state completed and completed_at. A record written by the Agent is not by itself review evidence: CDF must inspect the artifact and relevant full diff. No extra human approval is added where none was required.
+
+Any subsequent relevant source/configuration/dependency change invalidates the affected checks, product/gate result and final review. Archive old gate/review, reopen affected verified tasks as needed, rerun affected checks, retain or rebind unaffected evidence only after checking actual applicability, update the gate and review the new snapshot. HEAD alone cannot bind dirty content. For the mechanical completion record, evidence referenced by the current PASS binds to the current snapshot; reuse requires a new applicability receipt on that snapshot, not silently rewriting old evidence.
+
+Completion history entries are `{completion_gate, final_review, invalidated_reason}`. Preserve failed/insufficient attempts too. Inspect-only requests may report missing/stale evidence but cannot mutate history or reaffirm historical completion as current without reevaluation.

@@ -13,13 +13,13 @@ Use these cases when a small-looking request, risk signal, approval reply, parti
 Evidence shows the page passes a local color override to a shared button. The override is used only on the sign-in page, does not change disabled-state logic, has visual regression coverage, and can be reverted in one file.
 
 ```text
-Signal: shared component usage
-Evidence obligation: inspect the shared contract and known consumers
-Risk floor: Level M because a shared contract is involved
-Final risk: Level M
+Signal: bounded local usage, not a shared definition change
+Evidence obligation: existing supported parameter, unchanged definition/token/behavior and other consumers; independent verification and rollback
+S Reverse Check: every row PASS
+Final risk: Level S
 ```
 
-The shared-component signal prevents a superficial Level S classification, but it does not force Level L. Impact and blast radius remain bounded, uncertainty is low, and rollback is straightforward.
+Using a shared component alone imposes no risk floor. A changed component definition or public interface requires reassessment at least at M; global/cross-page behavior may require L. One changed file alone proves nothing.
 
 ### Variant B: cross-cutting token
 
@@ -113,22 +113,14 @@ This is a scope revision, not approval of the earlier plan. Reinspect and classi
 
 ```yaml
 Scope-Lock-Version: cdf-scope/v1
-in_scope:
-  - Update the admin help copy to the confirmed text.
-out_of_scope:
-  - Change export-entry visibility.
+in_scope: ["Update the admin help copy to the confirmed text."]
+out_of_scope: ["Change export-entry visibility.", "Hide the export entry from users without export permission."]
 non_goals: []
-assumptions:
-  - The confirmed help copy supplied by the user is final.
-stop_conditions:
-  - The copy change requires permission or conditional-rendering changes.
-will_change:
-  - Admin help copy.
-will_not_change:
-  - Export visibility.
-  - Permission and authorization behavior.
-acceptance_criteria:
-  - The admin help area displays the approved text.
+assumptions: ["The confirmed help copy supplied by the user is final."]
+stop_conditions: ["The copy change requires permission or conditional-rendering changes."]
+will_change: ["Admin help copy."]
+will_not_change: ["Export visibility.", "Permission and authorization behavior."]
+acceptance_criteria: ["The admin help area displays the approved text."]
 ```
 
 All eight arrays must exist. Empty arrays are valid; do not invent filler text merely to make a field non-empty.
@@ -137,19 +129,11 @@ If the user approves this subset, the Approval Record must identify it as partia
 
 The plan above remains the only canonical Scope Lock. Record the partial outcome as a projection without copying that block:
 
-```markdown
-## Partial Approval Result
-
-Approval Type: partial
-
-### Approved Items
-- Update the admin help copy to the confirmed text.
-
-### Unapproved Items
-- Hide the export entry from users without export permission.
-
-### Canonical Approved Scope
-Scope-Lock-Version: cdf-scope/v1
+```json
+{
+  "approved_items": ["Update the admin help copy to the confirmed text."],
+  "unapproved_items": ["Hide the export entry from users without export permission."]
+}
 ```
 
 The approved item exactly matches canonical `in_scope`; the unapproved item remains verbatim and is protected by canonical exclusions. The projection creates no second scope authority.
@@ -207,3 +191,15 @@ The canonical acceptance array contains A and B, but every task maps only to A. 
 ## Case 11: Concise approval, complete saved file
 
 For a bounded feature, show Requirement Understanding, Technical Approach, Implementation Plan, and Risks in the user's language, with a few short points and one action question. Include acceptance and checks in Implementation Plan and important exclusions or conditions in the relevant section. Do not print eleven headings, risk matrices, canonical YAML, or the raw Approval Record. When the user approves **Save as Task**, organize the approved material into the full eleven-section Development Plan, preserve the exact chat summary and approval statement, and save the complete task file. This formatting step does not require a second approval. For an S task, apply the same rule to its approved four-line fast path. If compilation reveals a new API change, acceptance requirement, or other material decision, show a revised concise summary and request renewed approval instead of hiding it in the file.
+
+## Case 12: API before frontend integration
+
+AC-001 is “The user can sign in through the login form.” TASK-001 delivers the approved API and references its local response/test checks. Once those checks pass, mark TASK-001 verified and allow dependent TASK-002 to implement the form. Neither task verification claims AC-001 passed. Product acceptance passes only after the planned end-to-end check; overall completion still needs the full gate and final review.
+
+## Case 13: Action already chosen or read-only draft
+
+“Analyze, then ask me to approve execution” calls for one approval question about the displayed plan and execution, not another execute/save menu. “Generate a task breakdown draft, do not execute or save” produces an explicitly unapproved draft only, without a task file, progress or authorization. An ambiguous “ok” following an ambiguous action remains insufficient.
+
+## Case 14: Reopen within approved scope
+
+A new failing check disproves verified API behavior. If repair needs no new scope or decision, preserve prior evidence, reopen the API task with reason/scope evidence, invalidate affected evidence and block previously started downstream tasks for revalidation. Reverify the API, then downstream work, then product acceptance/gate/final review. If repair needs a new authentication mechanism, stop and replan instead.

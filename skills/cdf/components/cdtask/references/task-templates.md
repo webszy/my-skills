@@ -1,155 +1,70 @@
-# Internal CDTask Task Templates
+# Internal CDTask v2 Task Templates
 
-Read this reference before compiling dependency data or tasks. It defines the only task format emitted from an approved `cdf-cdtask/v1` handoff.
+Load during compilation only. [Task Handoff](../../../references/task-handoff.md) owns approved planning/acceptance semantics; [Persistence](persistence.md) owns serialization/integrity. The validator's `--describe` output is the mechanical field-name inventory; these templates describe their meaning.
 
-These are task-definition formats, not runtime state, scheduling data, implementation instructions beyond the approved plan, or execution authorization. The authority boundary, Scope Guard, and blocking rules remain in [COMPONENT.md](../COMPONENT.md).
+## Task Definitions
 
-## Approved Planning Inputs
+Under `## Task Definitions`, use one JSON fenced array of objects with every field below. Empty optional arrays mean genuinely inapplicable; never invent filler.
 
-Compile from the approved Development Plan exactly as received. It must retain these headings, in order, with no splitting, renaming, or regeneration:
-
-```markdown
-### Requirement Understanding
-### Evidence Summary
-### Risk Gate Result
-### Scope Lock
-### Technical Approach
-### Implementation Plan
-### Risks
-### Rollback Plan
-### Acceptance Criteria
-### Verification Strategy
-### Next Action
+```json
+[
+  {
+    "id": "TASK-001",
+    "name": "Login API",
+    "goal": "Deliver the approved login API",
+    "depends_on": [],
+    "scope_mapping": ["Approved login flow"],
+    "write_scope": ["src/login-api.py"],
+    "shared_contracts": ["Approved response contract"],
+    "implementation_notes": ["Use the approved adapter"],
+    "contributes_to": ["AC-001"],
+    "task_verification": ["CHECK-API"],
+    "must_not_change": ["Authentication mechanism"],
+    "assumptions_and_stop_conditions": [],
+    "definition_status": "READY"
+  }
+]
 ```
 
-The plan's `### Scope Lock` contains the only canonical `cdf-scope/v1` block. Canonical `in_scope` and `acceptance_criteria` must each contain at least one non-empty entry. `cdf-scope/v1.acceptance_criteria` is the only canonical acceptance source. The plan's readable `### Acceptance Criteria` must repeat every canonical entry once, in the same order and verbatim. Do not compile from a plan whose projection adds, deletes, weakens, broadens, reinterprets, merges, or splits an entry.
+This illustrative object is not an approved task. Replace values only with content entailed by the actual approved plan.
 
-These eleven headings describe the saved document, not the chat approval display. CDF supplies the frozen full plan and, for summary-based approval, the separately preserved user-facing Approval Summary. If the user explicitly approved the full displayed plan, that plan itself is the approval basis. Validate semantic agreement with what the user saw; do not infer approval for hidden details or regenerate either payload during decomposition.
+- `id`: unique stable `TASK-` plus at least three digits. `name`/`goal`: one approved local deliverable.
+- `depends_on`: existing task IDs, no duplicates, self edge or cycles. Start only after dependencies are locally verified.
+- `scope_mapping`: verbatim `in_scope`/`will_change` entries, never exclusions. It is a projection, not write authorization.
+- `write_scope`: concrete approved paths/areas grounded in inspected evidence; no fabricated paths. Semantic review checks containment and protected boundaries; string membership cannot prove that a path is safe.
+- `shared_contracts`/`implementation_notes`: approved contracts and implementation direction only.
+- `contributes_to`: nonempty canonical positional AC IDs in canonical order. Does not claim product acceptance passed.
+- `task_verification`: nonempty IDs of `kind: task` checks in the approved Verification Strategy. Their descriptions define local verification; no full product AC must pass merely to unblock downstream tasks.
+- `must_not_change`: carry all canonical exclusions (`out_of_scope`, `non_goals`, `will_not_change`), plus relevant approved invariants. Unapproved/deferred work can appear only as protection.
+- `assumptions_and_stop_conditions`: preserve applicable canonical wording.
+- `definition_status`: `READY` only after definition validation; never runtime state.
 
-When present, preserve the partial-approval projection defined in [Human Approval](../../../SKILL.md#6-human-approval) exactly, and do not treat it as a second scope authority.
-
-Approved items must quote canonical `in_scope` entries. Unapproved items remain protective exclusions only and can never produce a task, positive write scope, acceptance mapping, or verification obligation. If the subsets cannot be separated safely, return `BLOCKED` with `partial-separation`.
+A compiler cannot add a new promise through verification. If a local check needs new behavior or a technical choice not entailed by the approved plan, return `BLOCKED: verification-change` to CDF planning.
 
 ## Dependency Graph
 
-Use stable task IDs and a directed acyclic graph. List only dependency constraints supported by the approved Development Plan.
+Under `## Dependency Graph`, use one JSON object mapping every task ID to its `depends_on` array exactly. This is a mechanically checked projection, not a second dependency authority. Task order is stable; topological execution comes from dependencies, not file order. No separate Dependency Data table is needed in v2.
 
-```markdown
-## Dependency Graph
-- TASK-001 -> TASK-003
-- TASK-002 -> TASK-003
-
-## Dependency Data
-| Task ID | Depends On | Approved reason |
-|---|---|---|
-| TASK-001 | none | <reason derived from the approved plan> |
-| TASK-002 | none | <reason derived from the approved plan> |
-| TASK-003 | TASK-001, TASK-002 | <reason derived from the approved plan> |
+```json
+{"TASK-001": [], "TASK-002": ["TASK-001"]}
 ```
 
-For independent tasks, use `none` in `Depends On`; do not invent an edge to make the graph look sequential. Do not assign workers, choose parallel execution, add scheduling fields, or infer coordination policy.
+## Acceptance Mapping
 
-Task IDs must be unique and stable within the saved document. Every dependency must resolve to a defined task. A task must not depend on itself, and the graph must be acyclic.
+Under `## Acceptance Mapping`, one JSON object maps **every** canonical positional AC ID to one or more approved `kind: product` check IDs:
 
-## Task Definition
-
-Keep every field. Use `None` only when the approved package establishes that the field is not applicable; do not create filler content.
-
-```markdown
-## TASK-001: <Task Name>
-
-### Goal
-<one approved outcome>
-
-### Dependencies
-- <stable task ID or none>
-
-### Approved Scope Mapping
-- `in_scope`: <verbatim approved entry>
-- `will_change`: <verbatim approved entry>
-
-### Write Scope
-- <approved path or affected area supported by repository evidence>
-
-### Shared Contracts
-- <approved interface, invariant, or none>
-
-### Implementation Notes
-- <direction already present in the approved Development Plan>
-
-### Acceptance Criteria
-- <applicable canonical cdf-scope/v1.acceptance_criteria entry, verbatim>
-
-### Must Not Change
-- <verbatim exclusion, non-goal, protected area, or approved invariant>
-
-### Planned Verification
-- <unperformed check mapped to the approved Verification Strategy>
-
-### Assumptions and Stop Conditions
-- <verbatim relevant assumption or stop condition, or none>
-
-### Definition Status
-READY
+```json
+{"AC-001": ["CHECK-LOGIN-INTEGRATION"]}
 ```
 
-### Field Rules
+Every AC must also occur in at least one task's `contributes_to`. Every approved local/product check must have a verification path. The full canonical array remains authoritative, even when two criteria happen to have identical wording. Never merge entries by text equality.
 
-- **Goal:** one outcome already approved by CDF. Do not combine unrelated outcomes.
-- **Dependencies:** match the Dependency Data exactly.
-- **Approved Scope Mapping:** quote the relevant canonical entries verbatim. Do not summarize or normalize them.
-- **Write Scope:** use only paths or areas supported by approved evidence. Never fabricate a path to make the task look concrete.
-- **Shared Contracts:** carry only contracts or invariants already present in the Development Plan or Scope Lock.
-- **Implementation Notes:** decompose approved direction; do not select a new approach.
-- **Acceptance Criteria:** select only applicable canonical `cdf-scope/v1.acceptance_criteria` entries, retain their canonical order, and copy them verbatim. Each task must map to at least one existing canonical entry. Do not add, delete, weaken, broaden, reinterpret, merge, or split criteria. Mechanical completion details belong in Planned Verification only when the approved strategy entails them. If a new criterion would be needed, return `BLOCKED` with `acceptance-change` so CDF can refresh planning and obtain renewed approval.
-- **Must Not Change:** preserve relevant `out_of_scope`, `non_goals`, `will_not_change`, partial-approval exclusions, and protected behavior. An unapproved item may appear only here as a protective exclusion, never as positive work.
-- **Planned Verification:** describe checks to be run later by an authorized CDF execution flow. Never mark them passed or performed.
-- **Assumptions and Stop Conditions:** keep applicable canonical wording verbatim so a resumed CDF flow can revalidate it.
-- **Definition Status:** use only `DRAFT` while compiling and `READY` after the Compilation Gate passes. Do not add runtime states to the immutable task definition. A later authorized CDF execution records `pending`, `in_progress`, `verified`, or `blocked` only in the separate [Execution Progress](../../../references/execution-progress.md) sidecar.
+For login: TASK-001 passes CHECK-API locally; TASK-002 can then build the form and pass its local checks. Only CHECK-LOGIN-INTEGRATION provides the planned end-to-end product evidence for AC-001. Overall completion checks every AC, all required checks and final review.
 
-Validate acceptance coverage in both directions: every task criterion must be a canonical entry, and every canonical `acceptance_criteria` entry must be mapped to at least one task with a corresponding planned check. Walk the full canonical array in order to detect omissions; repeated mappings of one entry do not cover another. A missing mapping that can be restored mechanically from the approved plan is `NOT_READY` until repaired. If covering it requires a new decision, scope, criterion, or verification obligation, return the applicable `BLOCKED` reason to CDF.
+## Scope Guard and future execution constraints
 
-If a task cannot be completed using these fields without adding meaning, scope, architecture, risk judgement, or acceptance criteria, return `BLOCKED` under the applicable reason class. CDF must produce refreshed planning and obtain renewed approval before task compilation resumes.
+`## Scope Guard` holds a JSON object `{ "result": "checked", "evidence": "<retrievable compilation/scope review record>" }`. This is a recorded review, not proof that a semantic check actually occurred. Check plan/approval agreement, exact canonical text, positive/protected boundaries, partial/phase separation, full coverage, approved checks, dependency validity and source traceability before recording it.
 
-## Scope Guard Output
+`## Future CDF Execution Constraints` contains prose stating: resume only through CDF after integrity, history and drift checks plus current explicit authorization; preserve immutable definition/approval/scope/phase boundaries; stop for new decisions or scope; skip only tasks with applicable evidence; perform local verification, then full product acceptance, Completion Evidence Gate and final scoped review. Read-only inspection grants no implementation or progress mutation.
 
-Include the completed Scope Guard after all task definitions:
-
-```markdown
-## Scope Guard
-- [x] Every task maps to approved `in_scope` or `will_change` content.
-- [x] No task treats `out_of_scope`, `non_goals`, `will_not_change`, or an unapproved remainder as positive scope or work; those entries appear only as protective constraints.
-- [x] The canonical Scope Lock is byte-for-byte unchanged.
-- [x] The Development Plan is carried verbatim with its canonical headings and sole Scope Lock block.
-- [x] The exact displayed approval basis (summary or explicitly approved full plan) is preserved, and the full plan and Scope Lock introduce no undisclosed scope, decisions, acceptance requirements, or verification obligations.
-- [x] The Development Plan Acceptance Criteria is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`.
-- [x] Canonical `in_scope` and `acceptance_criteria` are both non-empty.
-- [x] Every task-level criterion is an applicable canonical entry quoted verbatim and in canonical order; no task requires a new criterion.
-- [x] Every canonical acceptance entry is covered by at least one task and a corresponding planned check; no entry is omitted.
-- [x] The immutable Approval Record, stable Partial Approval Result when applicable, and approved phase boundary are preserved without creating a second scope authority.
-- [x] Dependencies and tasks introduce no product, technical, or architecture decision.
-- [x] Planned verification maps to the approved Verification Strategy and is not reported as performed.
-- [x] Assumptions, stop conditions, and protected areas are visible to a future CDF resume.
-- [x] Source worktree state, the path-scoped stable changes array, and CDF's save-drift preflight result and notes are preserved; dirty state was not treated as automatically material.
-- [x] No implementation, execution, scheduling, approval, risk classification, or implementation review occurred.
-```
-
-Do not check an item unless it was actually validated. Any unchecked item prevents persistence and is handled by the Compilation Gate.
-
-## Future CDF Execution Constraints
-
-Include these constraints in the saved document. They constrain a future CDF resume but do not authorize execution:
-
-```markdown
-## Future CDF Execution Constraints
-- Resume only through CDF.
-- Follow CDF's authoritative Integrity Verification, Resume a Saved Task, and Repository Drift rules.
-- Treat the canonical Scope Lock, Approval Record, approved phase boundary, partial-approval exclusions, task Write Scope, and dependencies as immutable limits.
-- Stop and return to CDF planning if current evidence requires new scope, a changed technical decision, changed acceptance criteria, or work from an unapproved remainder.
-- After explicit current authorization, record runtime state only in the separate `cdf-execution-progress/v1` sidecar; never write it into this task.
-- Skip only sidecar tasks whose `verified` evidence remains applicable. Inspect `in_progress` or `blocked` work before continuing it.
-- Report only checks actually performed. An inspect, review, summarize, or validate request authorizes no code change or progress mutation.
-- Before recording completion, apply CDF's Completion Evidence Gate to every canonical acceptance entry, including entries beyond any single task's mappings, and produce its structured report. Only a current PASS followed by successful final scoped review and all applicable approvals permits completion; all tasks being verified is not sufficient by itself.
-```
-
-After successful validation of an explicit continue request, CDF uses the runtime-only authorization format defined in [Resume a Saved Task](../../../SKILL.md#resume-a-saved-task), then follows [Execution Progress](../../../references/execution-progress.md). Neither action modifies the saved task or its Approval Record.
+`## Compilation Gate Result` is JSON `{ "status": "READY", "task_count": <integer> }`. It refers only to definition compilation, never implementation completion.

@@ -1,212 +1,104 @@
-# Internal CDTask Persistence Contract
+# Persistence and Integrity — cdf-cdtask/v2
 
-Read this reference before choosing a destination or writing a task document. It applies only to an approved `cdf-cdtask/v1` handoff selected by CDF's **Save as Task** path.
+Load only before approved save, read-back or saved-task integrity validation. CDTask receives the approved frozen package and CDF's drift conclusion; it does not plan or grant approval. The read-only standard-library [validator](../../../scripts/validate_cdf.py) implements the wire profile and hash functions. Run `--describe` for authoritative mechanical field names.
 
-The component boundary, compilation workflow, and blocking semantics remain in [COMPONENT.md](../COMPONENT.md).
+## Destination
 
-CDF owns the drift preflight immediately before **Save as Task**. It supplies the latest traceability metadata plus `Save-Drift-Preflight` and `Save-Drift-Notes`. CDTask persists that result and validates its shape; it does not reinspect the repository, reclassify drift, or replan.
+Use the requested path, resolving relative paths against absolute Workspace. Otherwise use `<Workspace>/_cdtask/YYYY-MM-DD-<slug>.md`, with the actual local save date and a title/first-scope-derived safe slug. If workspace is unavailable, require an explicit absolute destination. Create only necessary parents and the task document. For default collisions append `-2`, etc.; explicit collisions require a distinct destination or explicit replacement authority. Never silently overwrite an old task or its history.
 
-## Destination Rules
+## Markdown envelope
 
-Use `Requested-Task-Path` when CDF supplies it. If CDF supplies no path, use:
+Use UTF-8 without BOM, LF line endings and a final LF. Frontmatter begins/ends with `---`. Each field occupies one line `key: <JSON value>`; this is a narrow YAML 1.2 profile, not a general YAML parser. Strings are double-quoted JSON strings, booleans are JSON booleans, arrays are JSON arrays. No aliases, comments, duplicate keys or non-finite numbers. Unsupported input fails clearly; never silently normalize approved content.
 
-```text
-<Workspace>/_cdtask/YYYY-MM-DD-<short-slug>.md
-```
-
-- Derive the date at save time. Use `Task-Title` when CDF supplies it; otherwise derive a filesystem-safe slug mechanically from the first approved `in_scope` entry, using `task` if that entry has no usable characters.
-- Resolve a relative CDF-supplied path against the absolute `Workspace`.
-- If `Workspace` is `Unavailable`, require CDF to supply an absolute destination; do not guess a workspace.
-- Create only the required parent directory and task document.
-- Do not modify implementation files or unrelated documents.
-- Never silently overwrite an existing file.
-- For a default-path collision, append a numeric suffix such as `-2` and preserve the existing file.
-- For an explicit-path collision, return `BLOCKED` with `persistence-failure` unless CDF supplies a newly confirmed destination or explicit replacement authority.
-
-## Saved Document Frontmatter
-
-Use this frontmatter:
+Required metadata (also available through `--describe`):
 
 ```yaml
----
-task_contract: cdf-cdtask/v1
-handoff_type: approved-tasking
-status: tasking_ready
-source: cdf
-approval_state: approved
-risk_level: <Level S | Level M | Level L | Level XL>
-workspace: <absolute path or Unavailable>
-source_branch: <branch or Unavailable>
-source_commit: <commit or Unavailable>
-source_worktree_state: <clean | dirty | Unavailable>
+task_contract: "cdf-cdtask/v2"
+handoff_type: "approved-tasking"
+status: "tasking_ready"
+source: "cdf"
+approval_state: "approved"
+risk_level: "Level M"
+workspace: "/absolute/workspace"
+source_branch: "main"
+source_commit: "<actual commit or Unavailable>"
+source_worktree_state: "clean"
 source_worktree_changes: []
-save_drift_preflight: <matched | non-material-drift>
-save_drift_notes: <none | concise evidence-backed explanation>
-scope_lock_sha256: <64 lowercase hexadecimal characters>
-approval_record_sha256: <64 lowercase hexadecimal characters>
-created_at: <ISO-8601 timestamp>
----
+save_drift_preflight: "matched"
+save_drift_notes: "none"
+scope_lock_sha256: "<computed SHA-256>"
+approval_record_sha256: "<computed SHA-256>"
+definition_sha256: "<computed SHA-256>"
+created_at: "<ISO-8601 with timezone>"
+approval_basis: "summary"
+phase_scoped: false
 ```
 
-`tasking_ready` is a task-definition state. It does not mean assigned, running, executed, reviewed, or verified, and it does not grant execution authority.
+Risk supports S/M/L/XL. Traceability supports explicit `Unavailable` with its reason in Evidence Summary. Scope and approval records remain authoritative, not metadata labels. `tasking_ready` means definition readiness only.
 
-Both digest fields must contain lowercase 64-character values produced by actual hashing commands over the exact canonical payloads after the authoritative pre-save text comparison. If either digest cannot be computed, return `BLOCKED` with `persistence-failure`; do not save a document that cannot establish its later resume baseline. A fabricated digest is never permitted.
+After a document title, these `##` sections occur exactly in order:
 
-`source_worktree_changes` must always be one flow-style YAML array:
+1. CDF Resume Contract
+2. Approval Summary — only for `approval_basis: "summary"`
+3. Development Plan — the eleven headings in [Task Handoff](../../../references/task-handoff.md)
+4. Approved Phase Boundary — only when `phase_scoped: true`, required for XL
+5. Approval Record
+6. Partial Approval Result — only for partial approval
+7. Dependency Graph
+8. Task Definitions
+9. Acceptance Mapping
+10. Scope Guard
+11. Future CDF Execution Constraints
+12. Compilation Gate Result
+13. Save Verification
 
-- use `[]` when no relevant changes exist, including a clean worktree;
-- for relevant dirty paths, use a stable YAML sequence of quoted `git status --short` entries such as `[' M src/foo.ts', '?? src/new-file.ts']`, preserving both `XY` characters including a leading space;
-- use `[Unavailable]` only when relevant status evidence cannot be obtained.
+JSON sections use exactly one `json` fence and no additional prose outside it. Approval Summary uses one `text` fence, longer than any embedded fence, preserving exact displayed text and action question. Headings inside fences are quoted data, never section boundaries. Full-plan approval preserves that displayed plan directly without an invented summary. Do not add a second canonical scope block.
 
-Record only paths related to approved work, affected areas, or protected areas. Preserve repository-relative paths and sort deterministically by path, then status. Do not copy every unrelated dirty path from a large repository. `source_worktree_state: dirty` is a drift signal, not an automatic material-drift decision, and may legitimately accompany `source_worktree_changes: []` when all dirty paths are unrelated.
+CDF Resume Contract is exactly:
 
-## Required Document Sections
-
-Persist the sections below in this order. Copy approved planning material verbatim. Do not split, rename, summarize, or regenerate approved Development Plan content.
-
-1. **Title**
-2. **CDF Resume Contract**
-3. **Approval Summary**, for summary-based approval — the exact summary displayed to and approved by the user, including the action question
-4. **Development Plan** — verbatim, including its sole canonical `cdf-scope/v1` block
-5. **Approved Phase Boundary**, when applicable
-6. **Approval Record** — verbatim and immutable
-7. **Partial Approval Result**, when applicable, in the stable format below
-8. **Dependency Graph**
-9. **Dependency Data**
-10. **Task Definitions**
-11. **Scope Guard**
-12. **Future CDF Execution Constraints**
-13. **Compilation Gate Result**
-14. **Save Verification**
-
-Preserve the Approval Summary as a fenced text payload under `## Approval Summary`, with its original text and line breaks; the wrapper is not part of the summary. Use a fence longer than any fence sequence in the payload. Its embedded headings are quoted approval evidence and are not additional Development Plan sections. CDF supplies this payload before handoff; CDTask must never reconstruct what the user saw from the full plan. The eleven sections below are required in the file, not in the default chat approval message. Tasks explicitly approved from a displayed full Development Plan, including older tasks, may lack the summary section: validate against that verbatim displayed plan and recorded approval without duplicating its Scope Lock, inventing a summary, or rewriting an existing document. This exception does not allow summary-based approvals to omit their summary.
-
-The persisted Development Plan must retain these approved headings in this order:
-
-```markdown
-## Development Plan
-
-### Requirement Understanding
-### Evidence Summary
-### Risk Gate Result
-### Scope Lock
-### Technical Approach
-### Implementation Plan
-### Risks
-### Rollback Plan
-### Acceptance Criteria
-### Verification Strategy
-### Next Action
+```json
+{"resume_path": "CDF only", "execution_authorized": false, "progress_created_by_save": false}
 ```
 
-Its `### Scope Lock` section contains the only complete canonical Scope Lock in the saved document. Do not create a second Canonical Scope Lock section. For Level S or M, preserve a concise reversible action or genuine `None` under `### Rollback Plan`; do not expand it into filler.
+Approval Record is a JSON object with `user_statement` (exact), `context` (timestamp/turn), `action: "Save as Task"`, `type` (`full`, `conditional`, `partial`), `approved_items` (exact canonical in_scope array), `conditions` (canonical assumptions/stop conditions), `unapproved_items` (verbatim remainder protected by canonical exclusions). These fields preserve the existing approval meaning; no field can manufacture approval provenance.
 
-Canonical `in_scope` and `acceptance_criteria` must each contain at least one non-empty entry. `cdf-scope/v1.acceptance_criteria` is the sole canonical acceptance source. The plan's `### Acceptance Criteria` must contain an item-for-item, same-order, verbatim projection of that array. Task-level criteria may contain only applicable canonical entries quoted verbatim and retained in canonical order. Any empty required array, addition, deletion, weakening, broadening, reinterpretation, merge, split, or need for a new criterion is `BLOCKED` and returns to CDF for refreshed planning and renewed approval.
+Approved Phase Boundary is JSON `{phase, scope, ends_at, explicitly_deferred}`: scope exactly matches canonical in_scope and all deferred items are protected. Partial Approval Result is JSON `{approved_items, unapproved_items}` exactly projecting the Approval Record, not another Scope Lock.
 
-When applicable, persist the partial-approval projection defined in [Human Approval](../../../SKILL.md#6-human-approval) exactly as received.
+Task/graph/mapping/guard sections follow [Task Templates](task-templates.md). Save Verification is JSON `{ "status": "verified", "verified_at": "<actual read-back time>" }` only after the provisional read-back described below. All sections, including receipts and traceability, are immutable after save succeeds.
 
-Do not copy another complete Scope Lock into this projection. Approved Items must quote canonical `in_scope` entries verbatim. Unapproved Items must be preserved verbatim, protected by canonical exclusions, and have no positive task, write scope, acceptance mapping, or verification obligation. Unsafe separation is `BLOCKED` with `partial-separation` and returns to CDF planning and renewed approval.
+## Exact digest definitions
 
-The CDF Resume Contract must state:
+All hashes are SHA-256 over actual bytes, stored as 64 lowercase hex characters. Do not claim to have computed a hash without executing hashing code.
 
-```markdown
-## CDF Resume Contract
-- Resume Path: CDF only
-- Task Contract: cdf-cdtask/v1
-- Canonical Scope Lock: cdf-scope/v1
-- Saved Definition State: tasking_ready
-- Execution Authorized by This Document: No
-- Saved Approval Meaning: approved scope and Save as Task persistence authorization only
-- Source Workspace: <absolute path or Unavailable>
-- Source Branch: <branch or Unavailable>
-- Source Commit: <commit or Unavailable>
-- Source Worktree State: <clean | dirty | Unavailable>
-- Source Worktree Changes: <[] | [Unavailable] | stable YAML array of relevant git status entries>
-- Save Drift Preflight: <matched | non-material-drift>
-- Save Drift Notes: <none | concise evidence-backed explanation>
-- Scope Lock SHA-256: <64 lowercase hexadecimal characters>
-- Approval Record SHA-256: <64 lowercase hexadecimal characters>
-- Execution Progress Path: <resolved absolute saved-task path>.progress.yaml
-- Execution Progress Created By Save: No
+| Field | Exact bytes |
+|---|---|
+| scope_lock_sha256 | The sole Scope Lock fence payload, starting at `Scope-Lock-Version: cdf-scope/v1`, eight ordered arrays, exactly one trailing LF; no fences or trailing whitespace |
+| approval_record_sha256 | Literal `## Approval Record` plus LF, then the exact JSON fence payload with exactly one trailing LF; no fence delimiters |
+| definition_sha256 | **All saved document bytes**, excluding only the complete `definition_sha256: ...` line in top-level frontmatter, including that line's LF |
+
+The definition hash includes all other metadata and digests, approval basis, plan, scope, approval, partial/phase boundaries, task definitions, graph, acceptance mapping, constraints, compilation result and final save receipt. There is no mutable appendix or other exclusion. The digest cannot include itself. v2 Approval Record serialization is new; never apply it to v1 payloads.
+
+Runtime `task_document_sha256` additionally hashes the entire final task file, including its definition digest. It is a binding check established at execution, **not** a replacement for the definition baseline already established at save.
+
+Self-contained hashes detect accidental or one-sided tampering. Anyone able to replace content **and** hashes can forge consistency. SHA-256 is not an authorization signature, cannot independently prove human approval, and cannot replace trusted conversation evidence or pre-save text comparison.
+
+## Save transaction
+
+1. Require valid Save approval and semantic Scope Guard. Compare frozen approved plan, displayed basis, Scope Lock and Approval Record against the draft verbatim. Reject mismatch, ambiguity, duplicate canonical scope or unsupported wire format; do not repair approval text.
+2. In a private temporary draft, assemble the complete document, temporarily using digest placeholders and a provisional save receipt. Compute and fill scope/approval hashes. Write/read the provisional bytes and compare all immutable material and mappings against the handoff. Do not report ready.
+3. After that actual read-back succeeds, set Save Verification to verified with its actual timestamp. This still is an unsaved candidate. `python3 <skill>/scripts/validate_cdf.py <draft> --draft-hashes` computes all three candidate hashes without treating any existing baseline as valid. Fill the digest fields in the draft; because the full hash includes the other two digests, compute again after filling scope/approval values. Fill `definition_sha256` last.
+4. Validate the completed candidate normally; write final bytes to the resolved destination without clobbering an existing task. Reopen **that exact destination**, compare its complete bytes with the candidate, recompute all three hashes with the normal validator, and compare the approved payloads again. Recheck all semantic invariants and source traceability.
+5. Report READY and the absolute path only after final read-back succeeds. Any failure is `BLOCKED: persistence-failure`; preserve the failed artifact for diagnosis but do not treat it as resumable. Do not modify the final receipt after hashing. A post-save edit invalidates the definition.
+
+`--draft-hashes` is a calculation tool for newly approved, unsaved candidates. It never writes, approves, migrates or repairs an existing task. On first Execute Saved Task and every resume, use **normal validation** against persisted hashes. A missing/mismatched digest stops execution; never run the draft-hash route to bless current contents.
+
+## Validator CLI
+
+```bash
+python3 <skill>/scripts/validate_cdf.py <task.md>
+python3 <skill>/scripts/validate_cdf.py <task.md> --progress <task.md.progress.yaml> --snapshot <current-content-sha256>
+python3 <skill>/scripts/validate_cdf.py <task.md> --progress <current> --previous-progress <prior>
+python3 <skill>/scripts/validate_cdf.py --describe
 ```
 
-The Source Worktree Changes line is a readable projection of the frontmatter array and must preserve the same entries and order. The saved Approval Record is immutable historical evidence. It does not authorize future execution and must never be edited during resume.
-
-The Compilation Gate Result must state the pre-save result and must not claim that implementation was reviewed or verified:
-
-```markdown
-## Compilation Gate Result
-- Compilation Status: READY
-- Task Count: <number>
-- Scope Guard: passed
-- Canonical Scope Lock Before Save: matched approved handoff
-```
-
-## Canonical Integrity Verification
-
-Apply [Integrity Verification](../../../SKILL.md#integrity-verification) when validating the handoff, before save, during read-back, and during a later CDF resume. Compare payloads line for line while the handoff is available; that comparison is authoritative. Persist and later recompute both required digests as the durable cross-session baseline.
-
-Use only the deterministic payload-byte representation defined there: UTF-8, LF line endings, excluded Markdown fences, no trailing whitespace on payload lines, and exactly one trailing LF. Do not introduce a persistence-specific serialization variant.
-
-Reject non-LF payloads, trailing whitespace on payload lines, missing or ambiguous boundaries, a reordered Scope Lock, duplicate canonical Scope Lock blocks, unavailable digests, or digest mismatches. Never normalize or repair an approved payload inside CDTask. Mirror the computed lowercase 64-character digests in the CDF Resume Contract.
-
-## Read-Back Verification
-
-Write the document initially with this provisional final section:
-
-```markdown
-## Save Verification
-- Status: pending-read-back
-```
-
-Reopen the exact destination and verify all of the following:
-
-- the file exists at the resolved absolute path;
-- frontmatter parses and every required metadata value matches the approved handoff;
-- `task_contract`, `handoff_type`, `approval_state`, and definition `status` have the exact supported values;
-- workspace, branch, commit, worktree state, the legal path-scoped worktree changes array, save-drift preflight result and notes, risk, and timestamp traceability are present and match the handoff;
-- every required and applicable section is present;
-- the Approval Summary, when applicable, matches the displayed summary supplied by CDF verbatim; the Approval Record identifies approval of that summary or the explicitly displayed full plan, and the full plan and Scope Lock add no undisclosed meaning;
-- the Development Plan and all canonical headings are copied verbatim in the required order, with no regenerated parallel planning sections;
-- the plan contains exactly one canonical Scope Lock payload, and it matches the handoff payload line for line;
-- the plan's Acceptance Criteria is an item-for-item, same-order, verbatim projection of canonical `cdf-scope/v1.acceptance_criteria`;
-- the persisted Approval Record matches the received Approval Record line for line;
-- each digest field holds an actually computed digest and recomputing the exact payload produces the same value;
-- the stable Partial Approval Result, when applicable, contains only the verbatim Approved/Unapproved projections and `Scope-Lock-Version: cdf-scope/v1`, without a second complete Scope Lock;
-- partial-approval exclusions are preserved as protections and have no corresponding positive task, acceptance mapping, or verification obligation;
-- task IDs are unique and every dependency resolves;
-- the dependency graph is acyclic and matches Dependency Data and task fields;
-- every task maps only to approved scope and at least one applicable canonical acceptance entry quoted verbatim and in canonical order;
-- every canonical acceptance entry is covered by at least one task and a corresponding planned check; individual task mappings do not suffice without full coverage;
-- Scope Guard is fully checked;
-- Future CDF Execution Constraints and CDF-only resume rules are present;
-- the document contains no claim that planned implementation verification was performed;
-- the document does not grant execution authorization.
-
-Only after this pass succeeds, replace the provisional section with:
-
-```markdown
-## Save Verification
-- [x] Frontmatter and traceability match the approved handoff.
-- [x] Required sections are present.
-- [x] The displayed approval basis (summary or explicitly approved full plan) is preserved and its approved meaning matches the full plan and Scope Lock.
-- [x] Verbatim Development Plan headings, sole canonical Scope Lock, and acceptance projection match.
-- [x] Immutable Approval Record and stable partial-approval projection are preserved.
-- [x] Required Scope Lock and Approval Record digests recompute and match.
-- [x] Source worktree changes and save-drift preflight metadata match.
-- [x] Task IDs and dependency data are internally consistent.
-- [x] Every canonical acceptance entry has task coverage and a corresponding planned check.
-- [x] Scope Guard and CDF-only resume constraints are present.
-- [x] The document grants no execution authority.
-- Verified At: <ISO-8601 timestamp>
-```
-
-Writing this section is the only change made after the read-back pass, so it cannot invalidate the checks above. Confirm every item is checked and `Verified At` is populated, then return the absolute path and verified result to CDF and stop.
-
-If any read-back check fails, do not report `READY`, do not treat the file as resumable, and do not continue into execution. Return `BLOCKED` with `Blocked-Reason-Class: persistence-failure`, the affected path, and a concise mismatch or I/O reason.
-
-## Resume Validation Performed by CDF
-
-The saved document is input to a later CDF continuation, never directly to CDTask or an executor. Follow [Resume a Saved Task](../../../SKILL.md#resume-a-saved-task), [Integrity Verification](../../../SKILL.md#integrity-verification), and [Repository Drift](../../../SKILL.md#repository-drift) as the sole validation and authorization authorities.
-
-Only after validation and explicit current authorization may CDF enter [Execution Progress](../../../references/execution-progress.md), creating or updating the separate sidecar at the recorded path. Never append authorization or runtime status to this saved task, and never edit its canonical Scope Lock or Approval Record. A request only to inspect, review, summarize, or validate the task authorizes no code change or progress mutation.
+Exit 0 means mechanical structure/integrity checks succeeded (or hashes were calculated in explicit draft mode); exit 1 returns machine-readable `errors[{code,message}]`. Neither result declares semantic PASS, authorizes execution or proves source evidence true. `review_required` always lists remaining approval/scope/drift/evidence checks. No validator command writes any file. Use the same normal validator on save read-back, first execution and resume. v1 returns `legacy-reapproval`; follow [compatibility](../../../references/resume.md#legacy-and-version-policy), not hash repair.
